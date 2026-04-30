@@ -242,6 +242,12 @@ const LessonPlayer = {
     App.markComplete(this.lesson.id, pct);
     this._setProgress(100);
 
+    // Earn XP based on score
+    const xpBase  = 20;
+    const xpBonus = pct >= 90 ? 10 : pct >= 75 ? 5 : 0;
+    const xpTotal = xpBase + xpBonus;
+    if (typeof XP !== 'undefined') XP.earn(xpTotal, `${this.lesson.title}`);
+
     const back = `subject/${this.lesson.subject}/${this.lesson.grade}`;
     this._setContent(`
       <div class="score-card pop">
@@ -249,10 +255,11 @@ const LessonPlayer = {
         <h2>${msg}</h2>
         <p>You finished <strong>${this.lesson.title}</strong></p>
         <div class="score-num">${pct}%</div>
-        <p class="score-sub">Final score</p>
+        <p class="score-sub">Final score · <strong>+${xpTotal} XP earned</strong> ⚡</p>
       </div>
       <div class="action-bar" style="margin-top:22px; justify-content:center">
         <button class="btn btn-primary" onclick="App.go('${back}')">More Lessons →</button>
+        <button class="btn btn-ghost"   onclick="App.go('rewards')">My Rewards 🎁</button>
         <button class="btn btn-ghost"   onclick="App.go('home')">Home 🏠</button>
       </div>`);
   },

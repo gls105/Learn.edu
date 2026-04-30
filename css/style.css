@@ -54,6 +54,12 @@ body {
   height: 100dvh;
   overflow: hidden;
 }
+/* Student home full-bleed */
+#app.sh-full {
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
 
 /* ── Nav ──────────────────────────────────── */
 .nav {
@@ -1111,4 +1117,433 @@ body {
   font-weight: 900;
   letter-spacing: -2.5px;
   line-height: 1.05;
+}
+
+/* ============================================================
+   XP System — Toast, HUD, Themes, Rewards, Games
+   ============================================================ */
+
+/* ── XP HUD (nav pill) ─────────────────────────────────────── */
+.xp-hud {
+  background: linear-gradient(135deg, #fff3c4, #ffe066);
+  border: 1.5px solid #f59e0b;
+  border-radius: 999px;
+  padding: 5px 13px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  color: #92400e;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.xp-hud:hover { transform: scale(1.05); box-shadow: 0 2px 10px rgba(245,158,11,0.3); }
+
+/* ── XP Toast ──────────────────────────────────────────────── */
+.xp-toast {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  z-index: 99999;
+  background: white;
+  border: 2px solid #f59e0b;
+  border-radius: 16px;
+  padding: 12px 18px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  min-width: 160px;
+  max-width: 280px;
+  opacity: 0;
+  transform: translateX(30px) scale(0.95);
+  transition: opacity 0.3s, transform 0.3s;
+  pointer-events: none;
+}
+.xp-toast.xp-toast-show { opacity: 1; transform: translateX(0) scale(1); }
+.xp-toast-top { display: flex; align-items: center; gap: 8px; }
+.xp-toast-bolt { font-size: 1.3rem; }
+.xp-toast-amount { font-size: 1.05rem; font-weight: 900; color: #d97706; }
+.xp-toast-reason { font-size: 0.78rem; color: #6B7280; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+.xp-toast-unlock { margin-top: 8px; padding-top: 8px; border-top: 1px solid #fef3c7; font-size: 0.8rem; font-weight: 700; color: #E8562A; }
+
+/* ── XP Earned Pill ────────────────────────────────────────── */
+.xp-earned-pill {
+  display: inline-block;
+  background: linear-gradient(135deg, #fff3c4, #ffe066);
+  border: 1.5px solid #f59e0b;
+  border-radius: 999px;
+  padding: 6px 18px;
+  font-size: 0.88rem;
+  font-weight: 900;
+  color: #92400e;
+}
+
+/* ── Rewards Page ──────────────────────────────────────────── */
+.rewards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+.reward-card {
+  background: var(--card);
+  border-radius: 20px;
+  padding: 20px 16px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: 2px solid transparent;
+  min-height: 200px;
+}
+.reward-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+.reward-unlocked { border-color: #f59e0b22; }
+.reward-locked   { opacity: 0.55; filter: grayscale(0.4); }
+.reward-icon  { font-size: 2.4rem; margin-bottom: 6px; }
+.reward-label { font-size: 0.68rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 3px; }
+.reward-name  { font-size: 0.95rem; font-weight: 900; margin-bottom: 4px; }
+.reward-desc  { font-size: 0.77rem; color: var(--muted); line-height: 1.4; }
+.reward-xp-req { margin-top: 6px; font-size: 0.72rem; font-weight: 800; color: #f59e0b; }
+
+.filter-tab {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--muted);
+  transition: all 0.15s;
+}
+.filter-tab.active, .filter-tab:hover {
+  background: #E8562A;
+  border-color: #E8562A;
+  color: white;
+}
+
+/* ── Game Styles ───────────────────────────────────────────── */
+.game-hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 14px 20px;
+}
+.game-stat { text-align: center; }
+.game-stat span { display: block; font-size: 1.8rem; font-weight: 900; line-height: 1; }
+.game-stat small { font-size: 0.72rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.game-timer-wrap { text-align: center; }
+.game-timer { font-size: 2.2rem; font-weight: 900; color: #E8562A; line-height: 1; }
+.game-timer-track { width: 80px; height: 6px; background: #f3f4f6; border-radius: 999px; margin: 6px auto 0; overflow: hidden; }
+.game-timer-bar   { height: 6px; background: #E8562A; border-radius: 999px; transition: width 1s linear; }
+
+.mb-question-wrap { text-align: center; margin-bottom: 20px; }
+.mb-question {
+  font-size: 2.4rem;
+  font-weight: 900;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+@keyframes mb-pop-kf { 0% { transform: scale(0.85); opacity: 0.6; } 100% { transform: scale(1); opacity: 1; } }
+.mb-pop { animation: mb-pop-kf 0.2s ease-out; }
+.mb-feedback { font-size: 1.1rem; font-weight: 900; height: 24px; transition: opacity 0.3s; opacity: 0; }
+.mb-input-row { display: flex; gap: 10px; justify-content: center; }
+.mb-input {
+  width: 160px;
+  padding: 12px 16px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.mb-input:focus { border-color: #E8562A; }
+
+.game-result { text-align: center; padding: 12px 0; }
+
+/* ── Themes ────────────────────────────────────────────────── */
+
+/* 🌙 Night Mode */
+body.theme-night {
+  --bg: #0f0f13;
+  --surface: #1a1a22;
+  --card: #1e1e28;
+  --border: #2a2a38;
+  --text: #f0f0f5;
+  --muted: #8888aa;
+}
+body.theme-night .nav { background: #1a1a22 !important; border-color: #2a2a38 !important; }
+body.theme-night .xp-hud { background: linear-gradient(135deg, #2a2a38, #1e1e28); color: #ffe066; border-color: #f59e0b88; }
+
+/* 🌊 Ocean */
+body.theme-ocean {
+  --bg: #f0f9ff;
+  --surface: #e0f2fe;
+  --card: #ffffff;
+  --border: #bae6fd;
+  --text: #0c2d4a;
+  --muted: #0369a1;
+  --math: #0891b2;
+  --math-bg: #e0f2fe;
+}
+body.theme-ocean .btn-primary { background: #0891b2 !important; }
+body.theme-ocean .nav { background: #ffffff !important; border-color: #bae6fd !important; }
+
+/* 🌲 Forest */
+body.theme-forest {
+  --bg: #f0fdf4;
+  --surface: #dcfce7;
+  --card: #ffffff;
+  --border: #bbf7d0;
+  --text: #14532d;
+  --muted: #166534;
+}
+body.theme-forest .btn-primary { background: #16a34a !important; }
+body.theme-forest .nav { background: #ffffff !important; border-color: #bbf7d0 !important; }
+body.theme-forest .xp-hud { border-color: #16a34a; color: #14532d; background: linear-gradient(135deg, #dcfce7, #bbf7d0); }
+
+/* 🔮 Galaxy */
+body.theme-galaxy {
+  --bg: #0d0714;
+  --surface: #160c24;
+  --card: #1c1030;
+  --border: #2d1b50;
+  --text: #f5f0ff;
+  --muted: #a78bfa;
+}
+body.theme-galaxy .btn-primary { background: #7c3aed !important; }
+body.theme-galaxy .nav { background: #160c24 !important; border-color: #2d1b50 !important; }
+body.theme-galaxy .xp-hud { background: linear-gradient(135deg, #2d1b50, #4c1d95); color: #e9d5ff; border-color: #7c3aed; }
+
+/* ============================================================
+   Dev Panel (passcode: 1114)
+   ============================================================ */
+
+#dev-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0);
+  z-index: 99990;
+  transition: background 0.3s;
+}
+#dev-panel-backdrop.dev-panel-backdrop-show {
+  background: rgba(0,0,0,0.45);
+}
+
+#dev-panel-tray {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 99999;
+  background: white;
+  border-radius: 24px 24px 0 0;
+  padding: 24px 24px 32px;
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  max-width: 520px;
+  margin: 0 auto;
+}
+#dev-panel-tray.dev-panel-open {
+  transform: translateY(0);
+}
+
+/* dark theme override */
+body.theme-night #dev-panel-tray,
+body.theme-galaxy #dev-panel-tray {
+  background: #1e1e28;
+  color: #f0f0f5;
+}
+
+.dev-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.dev-panel-title {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--text);
+}
+.dev-panel-sub {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 2px;
+}
+.dev-panel-close {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.dev-panel-close:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+
+.dev-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+@media (max-width: 440px) {
+  .dev-panel-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.dev-role-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 8px;
+  border-radius: 18px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+  background: var(--surface);
+  text-align: center;
+}
+.dev-role-btn:hover  { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+.dev-role-btn:active { transform: scale(0.96); }
+
+.dev-student { border-color: #fecaca; background: #fff5f5; }
+.dev-student:hover { border-color: #E8562A; }
+.dev-parent  { border-color: #bbf7d0; background: #f0fdf4; }
+.dev-parent:hover  { border-color: #059669; }
+.dev-teacher { border-color: #bfdbfe; background: #eff6ff; }
+.dev-teacher:hover { border-color: #2563eb; }
+.dev-admin   { border-color: #ddd6fe; background: #f5f3ff; }
+.dev-admin:hover   { border-color: #7c3aed; }
+
+.dev-role-icon { font-size: 2rem; line-height: 1; }
+.dev-role-name { font-size: 0.88rem; font-weight: 900; color: var(--text); }
+.dev-role-desc { font-size: 0.7rem;  font-weight: 600; color: var(--muted); }
+
+.dev-logout-btn {
+  background: none;
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  padding: 7px 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.dev-logout-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+.dev-panel-hint {
+  text-align: center;
+  margin-top: 14px;
+  font-size: 0.72rem;
+  color: #d1d5db;
+  font-weight: 600;
+}
+
+/* ================================================================
+   Student Dashboard — IXL-style (sd-wrapper themes)
+   ================================================================ */
+
+/* Base wrapper */
+#sd-wrapper {
+  --sd-bg:     #ffffff;
+  --sd-card:   #f7f7f7;
+  --sd-accent: #E8562A;
+  --sd-text:   #0A0A0A;
+  --sd-muted:  #6B7280;
+  --sd-border: #EBEBEB;
+  background: var(--sd-bg);
+  color: var(--sd-text);
+  min-height: 100vh;
+  transition: background 0.3s, color 0.3s;
+}
+
+/* Themes */
+#sd-wrapper.sd-night   { --sd-bg:#0f0f13; --sd-card:#1e1e28; --sd-accent:#E8562A; --sd-text:#f0f0f5; --sd-muted:#8888aa; --sd-border:#2a2a38; }
+#sd-wrapper.sd-ocean   { --sd-bg:#f0f9ff; --sd-card:#e0f2fe; --sd-accent:#0891b2; --sd-text:#0c2d4a; --sd-muted:#0369a1; --sd-border:#bae6fd; }
+#sd-wrapper.sd-forest  { --sd-bg:#f0fdf4; --sd-card:#dcfce7; --sd-accent:#16a34a; --sd-text:#14532d; --sd-muted:#166534; --sd-border:#bbf7d0; }
+#sd-wrapper.sd-galaxy  { --sd-bg:#0d0714; --sd-card:#1c1030; --sd-accent:#7c3aed; --sd-text:#f5f0ff; --sd-muted:#a78bfa; --sd-border:#2d1b50; }
+#sd-wrapper.sd-cherry  { --sd-bg:#fff5f7; --sd-card:#ffe4e8; --sd-accent:#e11d48; --sd-text:#881337; --sd-muted:#be123c; --sd-border:#fecdd3; }
+#sd-wrapper.sd-electric{ --sd-bg:#fffdf0; --sd-card:#fef9c3; --sd-accent:#ca8a04; --sd-text:#713f12; --sd-muted:#92400e; --sd-border:#fde68a; }
+
+/* Theme dot swatches */
+.sd-theme-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.sd-theme-dot:hover { transform: scale(1.1); }
+.sd-theme-dot.active {
+  border-color: white;
+  box-shadow: 0 0 0 2px #374151;
+  transform: scale(1.15);
+}
+
+/* Responsive: stack two-column sections on small screens */
+@media (max-width: 640px) {
+  #sd-wrapper [style*="grid-template-columns:1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+  #sd-wrapper [style*="grid-template-columns:repeat(4,1fr)"] {
+    grid-template-columns: repeat(2,1fr) !important;
+  }
+}
+
+/* ── Student Home - Airbnb style ─────────────────────────── */
+.lc { transition: transform 0.2s, box-shadow 0.2s; }
+.lc:hover { transform: translateY(-4px) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important; }
+.sh-row::-webkit-scrollbar { display: none; }
+.sh-row { scrollbar-width: none; }
+
+/* ── Dev Panel FAB (floating button for iPad/touch) ─────── */
+#dev-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 20px;
+  z-index: 9000;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #1f2937;
+  color: white;
+  border: none;
+  font-size: 1.35rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  transition: transform 0.15s, opacity 0.15s;
+  opacity: 0.75;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+#dev-fab:hover,
+#dev-fab:active {
+  opacity: 1;
+  transform: scale(1.1);
+}
+@media (min-width: 900px) {
+  /* Slightly smaller + less intrusive on desktop */
+  #dev-fab { width: 44px; height: 44px; font-size: 1.1rem; opacity: 0.5; }
 }

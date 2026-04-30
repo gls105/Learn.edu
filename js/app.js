@@ -8,6 +8,8 @@ const App = {
   go(hash) { location.hash = hash; },
 
   route() {
+    // Remove student-home full-bleed on every route change
+    document.getElementById('app')?.classList.remove('sh-full');
     const raw   = location.hash.slice(1) || 'home';
     const parts = raw.split('/');
     const view  = parts[0];
@@ -54,6 +56,21 @@ const App = {
     } else if (view === 'assessment') {
       const classIdx = parseInt(parts[1] || '0');
       app.innerHTML = Views.assessment(classIdx);
+
+    } else if (view === 'rewards') {
+      app.innerHTML = Views.rewards();
+
+    } else if (view === 'game') {
+      const gameId = parts[1] || '';
+      if (gameId === 'mathblast') {
+        app.innerHTML = Views.game('mathblast');
+        MathBlast.init();
+      } else if (gameId === 'wordrush') {
+        app.innerHTML = Views.game('wordrush');
+        WordRush.init();
+      } else {
+        app.innerHTML = Views.rewards();
+      }
 
     } else if (view === 'spark' && parts[1] === 'play') {
       app.innerHTML = Views.sparkPlay();
@@ -200,7 +217,7 @@ const App = {
   loginAsDemo(role) {
     const names = { student:'Demo Student', teacher:'Ms. Demo', parent:'Demo Parent', district:'Demo District' };
     this.saveUser({ role, name: names[role] || role, demo: true, schooltype:'From a school or district', joinedAt: Date.now() });
-    if (role === 'student') { this.go('district-welcome'); return; }
+    if (role === 'student') { this.go('home'); return; }
     if (role === 'parent')  { this.go('profile-picker');   return; }
     this.go(this._needsCode(role) ? 'access-code/' + role : 'dashboard/' + role);
   },
@@ -362,6 +379,164 @@ function filterSpark(subj) {
   });
 }
 
+// ── Spark Dev Shortcut (⁠input box on spark page) ────────────────────
+const SparkDev = {
+  run(code) {
+    const val = (code || '').trim();
+    if (val === '1114') {
+      // Hide the bar, skip to results
+      const bar = document.getElementById('spark-dev-bar');
+      if (bar) bar.style.display = 'none';
+      if (window.SparkPlay && typeof SparkPlay.skipToResults === 'function') {
+        SparkPlay.skipToResults();
+      } else {
+        alert('SparkPlay not loaded yet — wait for the quiz to fully load first.');
+      }
+    } else if (val) {
+      // Wrong code — flash the input red
+      const inp = document.getElementById('spark-dev-input');
+      if (inp) {
+        inp.style.borderColor = '#dc2626';
+        inp.style.background = '#fee2e2';
+        setTimeout(() => { inp.style.borderColor = ''; inp.style.background = ''; inp.value = ''; }, 800);
+      }
+    }
+  },
+};
+
+// ── Dev Panel (passcode: 1114) ───────────────────────────────
+const DevPanel = {
+  _seq: '',
+  _code: '1114',
+
+  _createFAB() {
+    const fab = document.createElement('button');
+    fab.id = 'dev-fab';
+    fab.setAttribute('aria-label', 'Open Dev Panel');
+    fab.innerHTML = '🛠️';
+    fab.onclick = () => DevPanel.show();
+    document.body.appendChild(fab);
+  },
+
+  init() {
+    this._createFAB();
+    // Listen for keystrokes globally — detect '1114' sequence
+    document.addEventListener('keydown', (e) => {
+      // Only track digit keys; reset on any non-digit
+      if (e.key >= '0' && e.key <= '9') {
+        this._seq += e.key;
+        // Keep only last 4 chars
+        if (this._seq.length > 4) this._seq = this._seq.slice(-4);
+        if (this._seq === this._code) {
+          this._seq = '';
+          // On Spark page: skip to results instead of opening dev panel
+          const onSpark = location.hash.startsWith('#spark/play');
+          if (onSpark && window.SparkPlay) {
+            SparkPlay.skipToResults();
+          } else {
+            this.show();
+          }
+        }
+      } else if (!['Shift','Meta','Control','Alt','CapsLock','Tab'].includes(e.key)) {
+        this._seq = '';
+      }
+    });
+  },
+
+  show() {
+    document.getElementById('dev-panel')?.remove();
+    const panel = document.createElement('div');
+    panel.id = 'dev-panel';
+    panel.innerHTML = `
+      <div id="dev-panel-backdrop" onclick="DevPanel.hide()"></div>
+      <div id="dev-panel-tray">
+        <div class="dev-panel-header">
+          <div>
+            <div class="dev-panel-title">🛠️ Dev Panel</div>
+            <div class="dev-panel-sub">Jump to any dashboard instantly</div>
+          </div>
+          <button class="dev-panel-close" onclick="DevPanel.hide()">✕</button>
+        </div>
+        <div class="dev-panel-grid">
+          <button class="dev-role-btn dev-student" onclick="DevPanel.enter('student')">
+            <span class="dev-role-icon">🎒</span>
+            <span class="dev-role-name">Student</span>
+            <span class="dev-role-desc">Grade 6 demo</span>
+          </button>
+          <button class="dev-role-btn dev-parent" onclick="DevPanel.enter('parent')">
+            <span class="dev-role-icon">👨‍👧</span>
+            <span class="dev-role-name">Parent</span>
+            <span class="dev-role-desc">Family dashboard</span>
+          </button>
+          <button class="dev-role-btn dev-teacher" onclick="DevPanel.enter('teacher')">
+            <span class="dev-role-icon">🏫</span>
+            <span class="dev-role-name">Teacher</span>
+            <span class="dev-role-desc">Class view</span>
+          </button>
+          <button class="dev-role-btn dev-admin" onclick="DevPanel.enter('admin')">
+            <span class="dev-role-icon">⚙️</span>
+            <span class="dev-role-name">Admin</span>
+            <span class="dev-role-desc">District admin</span>
+          </button>
+        </div>
+        <div style="text-align:center;margin-top:12px">
+          <button class="dev-logout-btn" onclick="DevPanel.logout()">🚪 Log Out &amp; Clear All</button>
+        </div>
+        <div class="dev-panel-hint">Type <strong>1114</strong> anywhere to open this panel</div>
+      </div>
+    `;
+    document.body.appendChild(panel);
+    // Animate in
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        panel.querySelector('#dev-panel-tray').classList.add('dev-panel-open');
+        panel.querySelector('#dev-panel-backdrop').classList.add('dev-panel-backdrop-show');
+      });
+    });
+  },
+
+  hide() {
+    const panel = document.getElementById('dev-panel');
+    if (!panel) return;
+    const tray = panel.querySelector('#dev-panel-tray');
+    const backdrop = panel.querySelector('#dev-panel-backdrop');
+    tray.classList.remove('dev-panel-open');
+    backdrop.classList.remove('dev-panel-backdrop-show');
+    setTimeout(() => panel.remove(), 350);
+  },
+
+  enter(role) {
+    const names = { student: 'Martin', parent: 'Demo Parent', teacher: 'Ms. Rivera', admin: 'Admin Demo' };
+    const schools = { student: 'Lincoln Middle School', parent: '', teacher: 'Lincoln Middle School', admin: 'Lincoln District' };
+    App.saveUser({
+      role,
+      name: names[role] || role,
+      school: schools[role] || '',
+      demo: true,
+      devShortcut: true,
+      joinedAt: Date.now(),
+    });
+    this.hide();
+    setTimeout(() => {
+      if (role === 'student') { App.go('home'); return; }
+      if (role === 'parent')  { App.go('dashboard/parent'); return; }
+      App.go('dashboard/' + role);
+    }, 200);
+  },
+
+  logout() {
+    localStorage.removeItem('learnedu-user');
+    localStorage.removeItem('learnedu-progress');
+    localStorage.removeItem('learnedu-onboard');
+    this.hide();
+    setTimeout(() => App.go('home'), 200);
+  },
+};
+
 // ── Boot ─────────────────────────────────────────────────────
 window.addEventListener('hashchange', () => App.route());
-window.addEventListener('load',       () => App.route());
+window.addEventListener('load', () => {
+  if (typeof XP !== 'undefined') XP.init();
+  DevPanel.init();
+  App.route();
+});

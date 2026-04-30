@@ -27,6 +27,7 @@ const Views = {
         <button class=\"nav-back\" onclick=\"App.go('dashboard/${user.role}')\" style=\"border-color:var(--border)\">
           <i class=\"ph-bold ph-squares-four\" style=\"font-size:14px\"></i> Dashboard
         </button>
+        <button class=\"xp-hud\" onclick=\"App.go('rewards')\" title=\"Your XP &amp; Rewards\">⚡ 0 XP</button>
         <div style=\"display:flex;align-items:center;gap:6px;background:var(--surface);border:1.5px solid var(--border);border-radius:999px;padding:5px 12px 5px 6px;cursor:pointer\" onclick=\"App.go('dashboard/${user.role}')\">
           <div style=\"width:26px;height:26px;border-radius:50%;background:${user.role==='student'?'#E8562A':user.role==='teacher'?'#059669':user.role==='admin'?'#7c3aed':'#0369a1'};display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:900;color:white\">${(user.name||user.role)[0].toUpperCase()}</div>
           <span style=\"font-size:0.78rem;font-weight:700;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\">${user.name||user.role}</span>
@@ -38,6 +39,7 @@ const Views = {
           <svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"2\" stroke=\"currentColor\" width=\"18\" height=\"18\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z\"/></svg>
         </button>
         <a href=\"#study\" style=\"font-size:0.82rem;font-weight:700;color:var(--muted);text-decoration:none;margin-left:10px;margin-right:10px\">Study</a>
+        <button class=\"xp-hud\" onclick=\"App.go('rewards')\" title=\"Your XP &amp; Rewards\">⚡ 0 XP</button>
         <a href=\"#plans\" style=\"font-size:0.82rem;font-weight:700;color:var(--muted);text-decoration:none\">Plans</a>
         <button class=\"btn btn-outline\" onclick=\"App.go('login')\" style=\"font-size:0.82rem;padding:7px 16px\">Log In</button>
         <button class=\"btn btn-primary\" onclick=\"App.go('signup')\" style=\"font-size:0.82rem;padding:7px 16px\">Sign Up</button>
@@ -51,6 +53,8 @@ const Views = {
 
   // ── Home ─────────────────────────────────────────────────
   home() {
+    const _homeUser = App.getUser();
+    if (_homeUser && _homeUser.role === 'student') return Views.studentHome();
     const user = App.getUser();
     const progress = App.getProgress();
     const completedCount = Object.values(progress).filter(v => v.completed).length;
@@ -2172,6 +2176,18 @@ const Views = {
         <div class="zen-blob zen-blob-2"></div>
         <div class="zen-blob zen-blob-3"></div>
         <div id="spark-play-root" style="position:relative;z-index:1;max-width:680px;margin:0 auto;padding:32px 20px 60px"></div>
+      </div>
+      <!-- Dev shortcut bar -->
+      <div id="spark-dev-bar" style="position:fixed;bottom:0;left:0;right:0;z-index:9999;display:flex;justify-content:center;padding:10px 16px;background:rgba(255,255,255,0.92);backdrop-filter:blur(8px);border-top:1px solid #e5e7eb;gap:8px;align-items:center">
+        <span style="font-size:0.72rem;font-weight:700;color:#9ca3af">Dev shortcut:</span>
+        <input id="spark-dev-input" type="text" maxlength="10" placeholder="type code…"
+          style="border:1.5px solid #e5e7eb;border-radius:8px;padding:5px 12px;font-size:0.82rem;font-weight:700;width:120px;outline:none;font-family:inherit"
+          onkeydown="if(event.key==='Enter')SparkDev.run(this.value)"
+          oninput="if(this.value==='1114')SparkDev.run(this.value)">
+        <button onclick="SparkDev.run(document.getElementById('spark-dev-input').value)"
+          style="background:#E8562A;color:white;border:none;border-radius:8px;padding:5px 14px;font-size:0.78rem;font-weight:800;cursor:pointer;font-family:inherit">Go →</button>
+        <button onclick="document.getElementById('spark-dev-bar').style.display='none'"
+          style="background:none;border:1px solid #e5e7eb;border-radius:8px;padding:5px 10px;font-size:0.72rem;color:#9ca3af;cursor:pointer">✕</button>
       </div>`;
   },
 };
@@ -2526,40 +2542,82 @@ function updateFlashcard() {
     const tier = pct >= 90 ? 'A' : pct >= 80 ? 'B' : pct >= 70 ? 'C' : pct >= 55 ? 'D' : 'F';
     const tierColor = tier==='A'?'#059669':tier==='B'?'#0369a1':tier==='C'?'#d97706':tier==='D'?'#dc2626':'#7f1d1d';
     const tierBg    = tier==='A'?'#dcfce7':tier==='B'?'#dbeafe':tier==='C'?'#fef3c7':tier==='D'?'#fee2e2':'#fca5a5';
-    const tierLabel = tier==='A'?'Excellent':tier==='B'?'Good':tier==='C'?'Developing':tier==='D'?'Needs Work':'Below Level';
+    const tierLabel = tier==='A'?'Excellent':tier==='B'?'Good':tier==='C'?'Keep Going':tier==='D'?'Almost There':'Let\'s Build Stronger Foundations';
 
-    // Level description vs user grade
+    // ── Personalised next-steps recommendations ────────────────
+    const byS2 = state.bySubj || {};
+    const weakSubjects  = [];
+    const strongSubjects = [];
+    ['math','science','spanish'].forEach(k => {
+      const d  = byS2[k] || { right:0, total:0 };
+      const sp = d.total ? Math.round(d.right / d.total * 100) : null;
+      if (sp === null) return;
+      if (sp < 60) weakSubjects.push(k);
+      else if (sp >= 80) strongSubjects.push(k);
+    });
+    const lessonRecs = {
+      math:    { label:'Math',    icon:'📐', route:'subject/math/4',            tip:'Start with Grade 4 Math — fractions & decimals are the foundation.' },
+      science: { label:'Science', icon:'⚗️', route:'subject/science/earth',     tip:'Try Earth Science — ecosystems and cells explained step by step.' },
+      spanish: { label:'Spanish', icon:'🌎', route:'subject/spanish/beginning', tip:'Review Spanish Greetings — a quick refresh goes a long way.' },
+    };
+    const _weak = weakSubjects.slice();
+    let nextStepsHtml = '';
+    if (pct >= 80 && _weak.length === 0) {
+      nextStepsHtml = '<div style="background:#dcfce7;border-radius:14px;padding:16px 18px;text-align:left;margin-bottom:16px;border:1.5px solid #bbf7d0">' +
+        '<div style="font-size:0.72rem;font-weight:800;color:#166534;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">🚀 What to do next</div>' +
+        '<p style="margin:0 0 10px;font-size:0.88rem;font-weight:600;color:#14532d;line-height:1.5">You\'re crushing it! Try harder content — Grade 7+ Math or Advanced Science.</p>' +
+        '<button onclick="App.go(\'subject/math/7\')" style="background:#059669;color:white;border:none;border-radius:10px;padding:8px 16px;font-size:0.8rem;font-weight:800;cursor:pointer;font-family:inherit">Explore Advanced Lessons →</button>' +
+        '</div>';
+    } else if (_weak.length === 0) {
+      nextStepsHtml = '<div style="background:#dbeafe;border-radius:14px;padding:16px 18px;text-align:left;margin-bottom:16px;border:1.5px solid #bfdbfe">' +
+        '<div style="font-size:0.72rem;font-weight:800;color:#1e40af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">📚 What to do next</div>' +
+        '<p style="margin:0 0 10px;font-size:0.88rem;font-weight:600;color:#1e3a8a;line-height:1.5">Solid results! Pick a subject and go deeper to earn XP and unlock rewards.</p>' +
+        '<button onclick="App.go(\'home\')" style="background:#2563eb;color:white;border:none;border-radius:10px;padding:8px 16px;font-size:0.8rem;font-weight:800;cursor:pointer;font-family:inherit">Browse Lessons →</button>' +
+        '</div>';
+    } else {
+      const _recs = _weak.map(k => lessonRecs[k]).filter(Boolean);
+      let _recHtml = '';
+      _recs.forEach(function(r) {
+        _recHtml += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #fed7aa">' +
+          '<span style="font-size:1.3rem">' + r.icon + '</span>' +
+          '<div style="flex:1"><div style="font-size:0.85rem;font-weight:800;color:#431407">' + r.label + '</div>' +
+          '<div style="font-size:0.78rem;color:#9a3412;line-height:1.4">' + r.tip + '</div></div>' +
+          '<button onclick="App.go(\'' + r.route + '\')" style="background:#E8562A;color:white;border:none;border-radius:8px;padding:6px 14px;font-size:0.75rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap">Start →</button>' +
+          '</div>';
+      });
+      nextStepsHtml = '<div style="background:#fff7ed;border-radius:14px;padding:16px 18px;text-align:left;margin-bottom:16px;border:1.5px solid #fed7aa">' +
+        '<div style="font-size:0.72rem;font-weight:800;color:#c2410c;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">🎯 What to do next</div>' +
+        '<p style="margin:0 0 10px;font-size:0.88rem;font-weight:600;color:#7c2d12;line-height:1.5">Everyone starts somewhere — here\'s where to focus:</p>' +
+        _recHtml +
+        '</div>';
+    }
+
+
+    // ── Variables used in el.innerHTML template ─────────────
     const vsGrade = gradeDelta >= 2 ? 'Significantly above grade level'
                   : gradeDelta === 1 ? 'Above grade level'
                   : gradeDelta === 0 ? 'On grade level'
                   : gradeDelta === -1 ? 'Approaching grade level'
                   : 'Below grade level';
     const vsColor = gradeDelta >= 1 ? '#059669' : gradeDelta === 0 ? '#0369a1' : '#dc2626';
-
-    // Spark score code
-    const sparkCode = `${gradeLevel}-${tier}-${pct}`;
-
-    // Behavior tags
-    const isRushed = secsPerQ < 5;
-    const isImproved = pct >= 80 && secsPerQ >= 5;
+    const sparkCode = gradeLevel + '-' + tier + '-' + pct;
+    const isRushed  = secsPerQ < 5;
     const tags = [];
-    if (pct >= 90) tags.push({label:'Outstanding',    c:'#166534', bg:'#dcfce7'});
+    if (pct >= 90) tags.push({label:'Outstanding',        c:'#166534', bg:'#dcfce7'});
     if (isRushed)  tags.push({label:'Rushed — slow down', c:'#92400e', bg:'#fef3c7'});
-    if (pct < 50)  tags.push({label:'Review Needed',  c:'#7c3aed', bg:'#ede9fe'});
-    if (isImproved)tags.push({label:'Strong Performance', c:'#0369a1', bg:'#dbeafe'});
-
-    // Subject breakdown
+    if (pct < 50)  tags.push({label:'Review Needed',      c:'#7c3aed', bg:'#ede9fe'});
+    if (pct >= 80 && !isRushed) tags.push({label:'Strong Performance', c:'#0369a1', bg:'#dbeafe'});
     const byS = state.bySubj || {};
     const subjects = [
       {label:'Math',    key:'math',    icon:'📐', color:'#E8562A'},
       {label:'Science', key:'science', icon:'⚗️', color:'#059669'},
       {label:'Spanish', key:'spanish', icon:'🌎', color:'#7c3aed'},
-    ].map(s => {
+    ].map(function(s) {
       const d = byS[s.key] || {right:0,total:0};
       const sp = d.total ? Math.round(d.right/d.total*100) : 0;
       const st = sp>=90?'A':sp>=80?'B':sp>=70?'C':sp>=55?'D':'F';
-      return {...s, right:d.right, total:d.total, sp, st};
-    }).filter(s => s.total > 0);
+      return Object.assign({}, s, {right:d.right, total:d.total, sp:sp, st:st});
+    }).filter(function(s){ return s.total > 0; });
 
     el.innerHTML = `
       <div style="padding:24px 0 40px;text-align:center">
@@ -2617,6 +2675,9 @@ function updateFlashcard() {
         <!-- Tags -->
         ${tags.length ? `<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:7px;margin-bottom:16px">${tags.map(t=>`<span style="background:${t.bg};color:${t.c};padding:5px 14px;border-radius:999px;font-size:0.78rem;font-weight:800">${t.label}</span>`).join('')}</div>` : ''}
 
+        <!-- What to do next -->
+        ${nextStepsHtml}
+
         <!-- What the code means -->
         <div style="background:#f9fafb;border-radius:12px;padding:12px 16px;text-align:left;margin-bottom:20px">
           <div style="font-size:0.7rem;font-weight:800;color:#9ca3af;text-transform:uppercase;margin-bottom:6px">How to read your score</div>
@@ -2643,11 +2704,38 @@ function updateFlashcard() {
     const q = state.questions[state.idx];
     const isRight = picked === q.a;
     state.bySubj[q.subj].total++;
-    if (isRight) state.bySubj[q.subj].right++;
-    _origAnswer(picked);
+    if (isRight) { state.bySubj[q.subj].right++; state.correct = (state.correct||0) + 1; }
+    answer(picked);
   }
 
-  return { init, answer: answerTracked, next };
+  function skipToResults() {
+    try {
+    // Simulate a random realistic test result
+    state.answered = true;
+    state.bySubj = { math:{right:0,total:0}, science:{right:0,total:0}, spanish:{right:0,total:0} };
+    state.correct = 0;
+    // Each subject gets a different random accuracy between 35–95%
+    const subjectAccuracy = {
+      math:    0.35 + Math.random() * 0.60,
+      science: 0.35 + Math.random() * 0.60,
+      spanish: 0.35 + Math.random() * 0.60,
+    };
+    state.questions.forEach(q => {
+      const subj = q.subj;
+      if (!state.bySubj[subj]) state.bySubj[subj] = { right:0, total:0 };
+      state.bySubj[subj].total++;
+      if (Math.random() < subjectAccuracy[subj]) {
+        state.correct++;
+        state.bySubj[subj].right++;
+      }
+    });
+    // Simulate 1–4 minutes elapsed
+    state.startMs = Date.now() - (60000 + Math.floor(Math.random() * 180000));
+    showResults();
+    } catch(e) { console.error('skipToResults error:', e); }
+  }
+
+  return { init, answer: answerTracked, next, skipToResults };
 })();
 
 
@@ -2708,115 +2796,727 @@ Views.dashboardPicker = function() {
 
 // ── Student Dashboard ─────────────────────────────────────────
 Views.dashboardStudent = function() {
-  const progress = (() => { try { return JSON.parse(localStorage.getItem('learnedu-progress') || '{}'); } catch { return {}; } })();
-  const allLessons = [
-    {id:'math-4-multiplication', title:'Multiplication', subj:'math', grade:4, code:'4-MU-1A'},
-    {id:'math-4-long-division',  title:'Long Division',  subj:'math', grade:4, code:'4-LD-1A'},
-    {id:'math-5-fractions',      title:'Fractions',      subj:'math', grade:5, code:'5-FR-1A'},
-    {id:'math-5-decimals',       title:'Decimals',       subj:'math', grade:5, code:'5-DE-1A'},
-    {id:'math-6-ratios',         title:'Ratios',         subj:'math', grade:6, code:'6-RA-1A'},
-    {id:'science-4-ecosystems',  title:'Ecosystems',     subj:'science', grade:4, code:'4-EC-1A'},
-    {id:'science-5-cells',       title:'Cell Biology',   subj:'science', grade:5, code:'5-CE-1A'},
-    {id:'spanish-4-greetings',   title:'Greetings',      subj:'spanish', grade:4, code:'4-GR-1A'},
-    {id:'spanish-4-numbers',     title:'Numbers 1–20',   subj:'spanish', grade:4, code:'4-NU-1A'},
+  // ── helpers ───────────────────────────────────────────────────────────────
+  function sdSetTheme(id) {
+    localStorage.setItem('learnedu-student-theme', id);
+    var w = document.getElementById('sd-wrapper');
+    if (w) { w.className = w.className.replace(/sd-\w+/g, ''); w.classList.add('sd-' + id); }
+    document.querySelectorAll('.sd-theme-dot').forEach(function(d) {
+      d.classList.toggle('active', d.dataset.theme === id);
+    });
+  }
+  window._sdSetTheme = sdSetTheme;
+
+  // ── read progress ─────────────────────────────────────────────────────────
+  var progress = {};
+  try { progress = JSON.parse(localStorage.getItem('learnedu-progress') || '{}'); } catch(e) {}
+
+  var xpState = {total:0, streak:0, lastDate:null, unlockedIds:['theme-classic'], activeTheme:''};
+  try { xpState = XP.getState(); } catch(e) {}
+
+  var user = {};
+  try { user = App.getUser() || {}; } catch(e) {}
+  var userName    = (user && user.name) ? user.name : 'Student';
+  var userInitial = userName.charAt(0).toUpperCase();
+
+  var lvl = {num:1, name:'Beginner', color:'#059669'};
+  try { lvl = XP.level(xpState.total); } catch(e) {}
+
+  var nextReward = null;
+  try { nextReward = XP.nextReward(); } catch(e) {}
+
+  // ── lesson arrays ─────────────────────────────────────────────────────────
+  var mathLessons = [];
+  var sciLessons  = [];
+  var spaLessons  = [];
+  var elaLessons  = [];
+  var histLessons = [];
+  try { mathLessons = (typeof MATH_LESSONS    !== 'undefined') ? MATH_LESSONS    : []; } catch(e) {}
+  try { sciLessons  = (typeof SCIENCE_LESSONS !== 'undefined') ? SCIENCE_LESSONS : []; } catch(e) {}
+  try { spaLessons  = (typeof SPANISH_LESSONS !== 'undefined') ? SPANISH_LESSONS : []; } catch(e) {}
+  try { elaLessons  = (typeof ELA_LESSONS     !== 'undefined') ? ELA_LESSONS     : []; } catch(e) {}
+  try { histLessons = (typeof HISTORY_LESSONS !== 'undefined') ? HISTORY_LESSONS : []; } catch(e) {}
+
+  var allLessons = mathLessons.concat(sciLessons).concat(spaLessons).concat(elaLessons).concat(histLessons);
+
+  // ── completion counts ─────────────────────────────────────────────────────
+  function countDone(arr) {
+    var n = 0;
+    for (var i = 0; i < arr.length; i++) {
+      if (progress[arr[i].id] && progress[arr[i].id].completed) n++;
+    }
+    return n;
+  }
+  var mathDone  = countDone(mathLessons);
+  var sciDone   = countDone(sciLessons);
+  var spaDone   = countDone(spaLessons);
+  var elaDone   = countDone(elaLessons);
+  var histDone  = countDone(histLessons);
+  var totalDone = mathDone + sciDone + spaDone + elaDone + histDone;
+
+  var completedLessons = allLessons.filter(function(l) {
+    return progress[l.id] && progress[l.id].completed;
+  });
+  var scores = completedLessons.map(function(l) { return progress[l.id].score || 0; });
+  var avgScore = scores.length
+    ? Math.round(scores.reduce(function(a,b){return a+b;}, 0) / scores.length)
+    : 0;
+
+  // best subject
+  var subjectStats = [
+    {name:'Math',    done:mathDone,  total:mathLessons.length},
+    {name:'Science', done:sciDone,   total:sciLessons.length},
+    {name:'Spanish', done:spaDone,   total:spaLessons.length},
+    {name:'ELA',     done:elaDone,   total:elaLessons.length},
+    {name:'History', done:histDone,  total:histLessons.length},
   ];
-  const done = allLessons.filter(l => progress[l.id]?.completed);
-  const pending = allLessons.filter(l => !progress[l.id]?.completed);
-  const avgScore = done.length ? Math.round(done.reduce((s,l) => s + (progress[l.id]?.score||0), 0) / done.length) : 0;
-  const mathDone  = done.filter(l=>l.subj==='math').length;
-  const sciDone   = done.filter(l=>l.subj==='science').length;
-  const spaDone   = done.filter(l=>l.subj==='spanish').length;
-  const xp = done.length * 50 + (avgScore >= 80 ? done.length * 20 : 0);
-  const level = xp >= 400 ? 'Master 🏆' : xp >= 200 ? 'Scholar 📚' : xp >= 100 ? 'Explorer 🔭' : 'Beginner 🌱';
-  const levelColor = xp >= 400 ? '#E8562A' : xp >= 200 ? '#7c3aed' : xp >= 100 ? '#0369a1' : '#059669';
-  const sColor = s => ({math:'var(--math)',science:'var(--sci)',spanish:'var(--spa)'})[s]||'#888';
+  var bestSubj = 'None';
+  var bestPct  = -1;
+  for (var i = 0; i < subjectStats.length; i++) {
+    var sp = subjectStats[i].total > 0 ? subjectStats[i].done / subjectStats[i].total : 0;
+    if (sp > bestPct) { bestPct = sp; bestSubj = subjectStats[i].name; }
+  }
 
-  const recentHtml = done.slice(-4).reverse().map(l => {
-    const sc = progress[l.id]?.score||0;
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f3f4f6">
-      <div style="display:flex;align-items:center;gap:10px">
-        <span class="lesson-code" style="font-size:0.68rem">${l.code}</span>
-        <span style="font-weight:700;font-size:0.9rem">${l.title}</span>
-      </div>
-      <span style="font-weight:800;font-size:0.9rem;color:${sc>=80?'#059669':sc>=60?'#d97706':'#dc2626'}">${sc}%</span>
-    </div>`;
-  }).join('') || '<p style="color:#9ca3af;font-size:0.9rem;text-align:center;padding:16px 0">No lessons completed yet. Start one!</p>';
+  // today goal
+  var todayStr = new Date().toDateString();
+  var completedToday = completedLessons.some(function(l) {
+    var d = progress[l.id] && progress[l.id].date;
+    return d && new Date(d).toDateString() === todayStr;
+  });
 
-  const nextLesson = pending[0];
+  // XP bar
+  var xpBarPct   = 0;
+  var xpBarLabel = '';
+  if (nextReward) {
+    var allRewards = [];
+    try { allRewards = XP.REWARDS; } catch(e) {}
+    var nIdx   = allRewards.indexOf(nextReward);
+    var prevXp = nIdx > 0 ? (allRewards[nIdx-1].xpRequired || 0) : 0;
+    var range  = nextReward.xpRequired - prevXp;
+    var earned = xpState.total - prevXp;
+    xpBarPct   = range > 0 ? Math.min(100, Math.round(earned / range * 100)) : 100;
+    xpBarLabel = xpState.total + ' / ' + nextReward.xpRequired + ' XP \u2192 ' + nextReward.name + ' ' + nextReward.icon;
+  } else {
+    xpBarPct   = 100;
+    xpBarLabel = xpState.total + ' XP \u2014 All rewards unlocked! \uD83C\uDF89';
+  }
 
+  // recommended (first 3 uncompleted)
+  var recommended = [];
+  for (var i = 0; i < allLessons.length && recommended.length < 3; i++) {
+    if (!progress[allLessons[i].id] || !progress[allLessons[i].id].completed) {
+      recommended.push(allLessons[i]);
+    }
+  }
+
+  // recent (last 5 by date)
+  var recentLessons = completedLessons.slice().sort(function(a,b) {
+    var da = (progress[a.id] && progress[a.id].date) ? new Date(progress[a.id].date).getTime() : 0;
+    var db = (progress[b.id] && progress[b.id].date) ? new Date(progress[b.id].date).getTime() : 0;
+    return db - da;
+  }).slice(0, 5);
+
+  function timeAgo(dateStr) {
+    if (!dateStr) return 'recently';
+    var diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return '1 day ago';
+    return diff + ' days ago';
+  }
+
+  // unlocked badges/rewards
+  var unlockedBadges = [];
+  try {
+    unlockedBadges = XP.REWARDS.filter(function(r) {
+      return xpState.unlockedIds.indexOf(r.id) !== -1;
+    });
+  } catch(e) {}
+
+  // theme
+  var currentTheme = 'classic';
+  try { currentTheme = localStorage.getItem('learnedu-student-theme') || 'classic'; } catch(e) {}
+
+  var themes = [
+    {id:'classic',  color:'#E8562A', label:'Classic'},
+    {id:'night',    color:'#1a1a2e', label:'Night'},
+    {id:'ocean',    color:'#0891b2', label:'Ocean'},
+    {id:'forest',   color:'#16a34a', label:'Forest'},
+    {id:'galaxy',   color:'#7c3aed', label:'Galaxy'},
+    {id:'cherry',   color:'#e11d48', label:'Cherry'},
+    {id:'electric', color:'#ca8a04', label:'Electric'},
+  ];
+
+  var subjColors = {math:'#E8562A', science:'#0891b2', spanish:'#16a34a', ela:'#7c3aed', history:'#d97706'};
+
+  var subjectCards = [
+    {name:'Math',    icon:'\uD83D\uDCD0', done:mathDone,  total:mathLessons.length,  color:'#E8562A', route:'subject/math'},
+    {name:'Science', icon:'\u2697\uFE0F', done:sciDone,   total:sciLessons.length,   color:'#0891b2', route:'subject/science'},
+    {name:'Spanish', icon:'\uD83C\uDF0E', done:spaDone,   total:spaLessons.length,   color:'#16a34a', route:'subject/spanish'},
+    {name:'ELA',     icon:'\uD83D\uDCD6', done:elaDone,   total:elaLessons.length,   color:'#7c3aed', route:'subject/ela'},
+    {name:'History', icon:'\uD83C\uDFDB\uFE0F', done:histDone,  total:histLessons.length,  color:'#d97706', route:'subject/history'},
+  ];
+
+  // ── BUILD SECTIONS ────────────────────────────────────────────────────────
+
+  // theme swatches
+  var themeSwatches = '';
+  for (var i = 0; i < themes.length; i++) {
+    var t = themes[i];
+    themeSwatches += '<div class="sd-theme-dot' + (t.id === currentTheme ? ' active' : '')
+      + '" data-theme="' + t.id
+      + '" title="' + t.label
+      + '" style="background:' + t.color
+      + '" onclick="_sdSetTheme(\'' + t.id + '\')"></div>';
+  }
+
+  // today's goal badge
+  var heroGoal = completedToday
+    ? '<span style="font-size:0.78rem;font-weight:700;color:#059669;background:#dcfce7;padding:3px 10px;border-radius:999px">\u2705 Done today!</span>'
+    : '<span style="font-size:0.78rem;font-weight:700;color:#d97706;background:#fef9c3;padding:3px 10px;border-radius:999px">\uD83C\uDFAF 1 lesson today</span>';
+
+  // subject progress cards
+  var subjectCardsHtml = '';
+  for (var i = 0; i < subjectCards.length; i++) {
+    var sc = subjectCards[i];
+    var pct = sc.total > 0 ? Math.round(sc.done / sc.total * 100) : 0;
+    subjectCardsHtml +=
+      '<div onclick="App.go(\'' + sc.route + '\')"'
+      + ' style="background:var(--sd-card);border:1.5px solid var(--sd-border);border-radius:16px;padding:18px;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;position:relative;overflow:hidden"'
+      + ' onmouseover="this.style.transform=\'translateY(-3px)\';this.style.boxShadow=\'0 8px 20px rgba(0,0,0,0.12)\'"'
+      + ' onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'
+      + '<div style="position:absolute;top:0;left:0;right:0;height:4px;background:' + sc.color + '"></div>'
+      + '<div style="font-size:1.6rem;margin-bottom:8px">' + sc.icon + '</div>'
+      + '<div style="font-size:0.92rem;font-weight:900;color:var(--sd-text);margin-bottom:2px">' + sc.name + '</div>'
+      + '<div style="font-size:0.73rem;color:var(--sd-muted);margin-bottom:10px">' + sc.done + ' / ' + sc.total + ' lessons</div>'
+      + '<div style="background:var(--sd-border);border-radius:999px;height:7px;overflow:hidden;margin-bottom:6px">'
+      +   '<div style="height:100%;width:' + pct + '%;background:' + sc.color + ';border-radius:999px;transition:width 0.6s"></div>'
+      + '</div>'
+      + '<div style="font-size:0.78rem;font-weight:700;color:' + sc.color + '">' + pct + '% complete</div>'
+      + '</div>';
+  }
+
+  // keep going cards
+  var keepGoingHtml = '';
+  if (recommended.length === 0) {
+    keepGoingHtml = '<div style="text-align:center;padding:24px;color:var(--sd-muted)">\uD83C\uDF89 All lessons complete!</div>';
+  } else {
+    for (var i = 0; i < recommended.length; i++) {
+      var l = recommended[i];
+      var lc = subjColors[l.subject] || '#888';
+      keepGoingHtml +=
+        '<div onclick="App.go(\'lesson/' + l.id + '\')"'
+        + ' style="display:flex;align-items:center;gap:14px;background:var(--sd-card);border:1.5px solid var(--sd-border);border-radius:14px;padding:16px;cursor:pointer;transition:transform 0.15s"'
+        + ' onmouseover="this.style.transform=\'translateY(-2px)\'"'
+        + ' onmouseout="this.style.transform=\'\'">'
+        + '<div style="width:42px;height:42px;border-radius:10px;background:' + lc + ';display:flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:800;color:white;text-align:center;flex-shrink:0;line-height:1.2">' + (l.code || '') + '</div>'
+        + '<div style="flex:1;min-width:0">'
+        +   '<div style="font-size:0.88rem;font-weight:800;color:var(--sd-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (l.title || l.topic || '') + '</div>'
+        +   '<div style="font-size:0.73rem;color:var(--sd-muted);text-transform:capitalize">' + (l.subject || '') + (l.grade ? ' \u00B7 Grade ' + l.grade : (l.level ? ' \u00B7 ' + l.level : '')) + '</div>'
+        + '</div>'
+        + '<span style="font-size:0.84rem;font-weight:800;color:var(--sd-accent);white-space:nowrap">Start \u2192</span>'
+        + '</div>';
+    }
+  }
+
+  // recent activity
+  var recentHtml = '';
+  if (recentLessons.length === 0) {
+    recentHtml = '<div style="text-align:center;padding:24px;color:var(--sd-muted);font-size:0.88rem">No lessons completed yet. Start one!</div>';
+  } else {
+    for (var i = 0; i < recentLessons.length; i++) {
+      var l = recentLessons[i];
+      var sc = progress[l.id] ? (progress[l.id].score || 0) : 0;
+      var scoreColor = sc >= 80 ? '#059669' : sc >= 60 ? '#d97706' : '#dc2626';
+      var lc2 = subjColors[l.subject] || '#888';
+      recentHtml +=
+        '<div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--sd-border)">'
+        + '<span style="background:' + lc2 + ';color:white;font-size:0.6rem;font-weight:800;padding:3px 6px;border-radius:5px;flex-shrink:0;white-space:nowrap">' + (l.code || '') + '</span>'
+        + '<span style="flex:1;font-size:0.86rem;font-weight:700;color:var(--sd-text);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (l.title || l.topic || '') + '</span>'
+        + '<span style="font-size:0.84rem;font-weight:800;color:' + scoreColor + ';flex-shrink:0">' + sc + '%</span>'
+        + '<span style="font-size:0.72rem;color:var(--sd-muted);flex-shrink:0;min-width:62px;text-align:right">' + timeAgo(progress[l.id] && progress[l.id].date) + '</span>'
+        + '</div>';
+    }
+  }
+
+  // badges
+  var badgesHtml = '';
+  if (unlockedBadges.length === 0) {
+    badgesHtml = '<div style="color:var(--sd-muted);font-size:0.84rem;padding:8px 0">Complete lessons to earn badges!</div>';
+  } else {
+    for (var i = 0; i < unlockedBadges.length; i++) {
+      var b = unlockedBadges[i];
+      badgesHtml +=
+        '<div style="display:inline-flex;flex-direction:column;align-items:center;gap:4px;background:var(--sd-bg);border:1.5px solid var(--sd-border);border-radius:14px;padding:12px 14px;min-width:68px;flex-shrink:0">'
+        + '<span style="font-size:1.6rem">' + b.icon + '</span>'
+        + '<span style="font-size:0.66rem;font-weight:700;color:var(--sd-muted);text-align:center;line-height:1.2">' + b.name + '</span>'
+        + '</div>';
+    }
+  }
+
+  // quick stats row
+  var statsHtml =
+    '<div style="background:var(--sd-card);border:1.5px solid var(--sd-border);border-radius:14px;padding:14px 16px;text-align:center">'
+    + '<div style="font-size:1.5rem;font-weight:900;color:var(--sd-accent)">' + totalDone + '</div>'
+    + '<div style="font-size:0.68rem;font-weight:700;color:var(--sd-muted);text-transform:uppercase;letter-spacing:0.05em;margin-top:2px">Lessons Done</div>'
+    + '</div>'
+    + '<div style="background:var(--sd-card);border:1.5px solid var(--sd-border);border-radius:14px;padding:14px 16px;text-align:center">'
+    + '<div style="font-size:1.5rem;font-weight:900;color:var(--sd-accent)">' + (avgScore ? avgScore + '%' : '\u2014') + '</div>'
+    + '<div style="font-size:0.68rem;font-weight:700;color:var(--sd-muted);text-transform:uppercase;letter-spacing:0.05em;margin-top:2px">Avg Score</div>'
+    + '</div>'
+    + '<div style="background:var(--sd-card);border:1.5px solid var(--sd-border);border-radius:14px;padding:14px 16px;text-align:center">'
+    + '<div style="font-size:1.1rem;font-weight:900;color:var(--sd-accent)">' + bestSubj + '</div>'
+    + '<div style="font-size:0.68rem;font-weight:700;color:var(--sd-muted);text-transform:uppercase;letter-spacing:0.05em;margin-top:2px">Best Subject</div>'
+    + '</div>'
+    + '<div style="background:var(--sd-card);border:1.5px solid var(--sd-border);border-radius:14px;padding:14px 16px;text-align:center">'
+    + '<div style="font-size:1.5rem;font-weight:900;color:var(--sd-accent)">\uD83D\uDD25 ' + xpState.streak + '</div>'
+    + '<div style="font-size:0.68rem;font-weight:700;color:var(--sd-muted);text-transform:uppercase;letter-spacing:0.05em;margin-top:2px">Day Streak</div>'
+    + '</div>';
+
+  // ── FINAL HTML ────────────────────────────────────────────────────────────
   return `
-    ${_dashNav('student','Student','🎒')}
-    <div class="zen-bg" style="min-height:100vh">
-      <div class="zen-blob zen-blob-1"></div><div class="zen-blob zen-blob-2"></div><div class="zen-blob zen-blob-3"></div>
-      <div style="position:relative;z-index:1;max-width:800px;margin:0 auto;padding:36px 20px 80px">
+    ${_dashNav('student','Dashboard','\uD83C\uDF92')}
+    <div id="sd-wrapper" class="sd-${currentTheme}">
 
-        <!-- Header -->
-        <div style="display:flex;align-items:center;gap:16px;margin-bottom:32px">
-          <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#E8562A,#f97316);display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:900;color:white;flex-shrink:0">S</div>
+      <!-- Header bar with theme picker -->
+      <div style="background:var(--sd-card);border-bottom:2px solid var(--sd-border);padding:14px 24px">
+        <div style="max-width:100%;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
           <div>
-            <h1 style="font-size:1.6rem;font-weight:900;letter-spacing:-0.5px;margin-bottom:2px">My Dashboard</h1>
-            <span style="font-size:0.82rem;font-weight:700;color:${levelColor};background:${levelColor}18;padding:3px 10px;border-radius:999px">${level}</span>
+            <div style="font-size:0.65rem;font-weight:700;color:var(--sd-muted);text-transform:uppercase;letter-spacing:0.08em">Student Dashboard</div>
+            <h1 style="font-size:1.25rem;font-weight:900;color:var(--sd-text);margin:2px 0 0">Learn.edu</h1>
           </div>
-          <div style="margin-left:auto;text-align:right">
-            <div style="font-size:1.6rem;font-weight:900;color:#E8562A">${xp}</div>
-            <div style="font-size:0.72rem;font-weight:600;color:#9ca3af">XP EARNED</div>
+          <div style="display:flex;align-items:center;gap:7px;background:var(--sd-bg);border:1.5px solid var(--sd-border);padding:6px 10px;border-radius:999px">
+            ${themeSwatches}
+          </div>
+        </div>
+      </div>
+
+      <div style="max-width:100%;padding:24px 32px 80px">
+
+        <!-- Hero Strip -->
+        <div style="background:var(--sd-card);border:1.5px solid var(--sd-border);border-radius:20px;padding:20px 24px;margin-bottom:22px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:14px;flex-shrink:0">
+            <div style="width:54px;height:54px;border-radius:50%;background:${lvl.color};display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:900;color:white;flex-shrink:0">${userInitial}</div>
+            <div>
+              <div style="font-size:1rem;font-weight:900;color:var(--sd-text)">${userName}</div>
+              <span style="font-size:0.74rem;font-weight:700;color:${lvl.color};background:${lvl.color}22;padding:2px 10px;border-radius:999px">Lvl ${lvl.num} \u00B7 ${lvl.name}</span>
+            </div>
+          </div>
+          <div style="flex:1;min-width:180px">
+            <div style="font-size:0.72rem;font-weight:600;color:var(--sd-muted);margin-bottom:7px">${xpBarLabel}</div>
+            <div style="background:var(--sd-border);border-radius:999px;height:10px;overflow:hidden">
+              <div style="height:100%;width:${xpBarPct}%;background:var(--sd-accent);border-radius:999px;transition:width 0.8s ease"></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+            <div style="font-size:1.1rem;font-weight:900;color:var(--sd-text)">\uD83D\uDD25 ${xpState.streak} days</div>
+            ${heroGoal}
           </div>
         </div>
 
-        <!-- Stats row -->
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
-          ${_statCard('✅', done.length, 'Lessons Done', '#059669')}
-          ${_statCard('📊', (avgScore||'—')+(avgScore?'%':''), 'Avg Score', '#E8562A')}
-          ${_statCard('⚡', Math.min(done.length,9), 'Day Streak', '#d97706')}
-          ${_statCard('📚', allLessons.length - done.length, 'To Go', '#7c3aed')}
+        <!-- Quick Stats Row -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px">
+          ${statsHtml}
         </div>
 
-        <!-- Subject progress -->
-        <div style="background:rgba(255,255,255,0.85);backdrop-filter:blur(12px);border-radius:20px;padding:24px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,0.06)">
-          <h2 style="font-size:1rem;font-weight:900;margin-bottom:16px">Subject Progress</h2>
-          ${[
-            {label:'📐 Math',    done:mathDone, total:5, color:'var(--math)'},
-            {label:'⚗️ Science', done:sciDone,  total:2, color:'var(--sci)'},
-            {label:'🌎 Spanish', done:spaDone,  total:2, color:'var(--spa)'},
-          ].map(s => `
-            <div style="margin-bottom:14px">
-              <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-                <span style="font-size:0.88rem;font-weight:700">${s.label}</span>
-                <span style="font-size:0.82rem;font-weight:700;color:#6b7280">${s.done}/${s.total} lessons</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:10px">${_bar(s.done/s.total*100, s.color)}</div>
-            </div>`).join('')}
-        </div>
-
-        <!-- Recent activity -->
-        <div style="background:rgba(255,255,255,0.85);backdrop-filter:blur(12px);border-radius:20px;padding:24px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,0.06)">
-          <h2 style="font-size:1rem;font-weight:900;margin-bottom:4px">Recent Activity</h2>
-          ${recentHtml}
-        </div>
-
-        <!-- Next lesson CTA -->
-        ${nextLesson ? `
-        <div style="background:linear-gradient(135deg,#E8562A,#f97316);border-radius:20px;padding:24px;color:white;cursor:pointer" onclick="App.go('lesson/${nextLesson.id}')">
-          <div style="font-size:0.78rem;font-weight:700;opacity:0.8;margin-bottom:6px">⚡ UP NEXT</div>
-          <div style="font-size:1.2rem;font-weight:900;letter-spacing:-0.3px;margin-bottom:4px">${nextLesson.title}</div>
-          <div style="font-size:0.82rem;opacity:0.85">${nextLesson.code} · Grade ${nextLesson.grade} · Tap to start →</div>
-        </div>` : `<div style="background:linear-gradient(135deg,#059669,#10b981);border-radius:20px;padding:24px;color:white;text-align:center">
-          <div style="font-size:1.5rem;margin-bottom:8px">🎉</div>
-          <div style="font-size:1.1rem;font-weight:900">All lessons complete!</div>
-          <div style="font-size:0.85rem;opacity:0.85;margin-top:4px">Try Spark to test your knowledge</div>
-        </div>`}
-
-        <!-- Spark CTA -->
-        <div onclick="App.go('spark/play')" style="margin-top:14px;background:white;border:2px solid #111;border-radius:20px;padding:18px 24px;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
-          <div>
-            <div style="font-size:0.88rem;font-weight:900">⚡ Take Spark Assessment</div>
-            <div style="font-size:0.78rem;color:#6b7280;font-weight:500">60 questions · Math, Science & Spanish</div>
+        <!-- Subject Progress Cards (IXL-style) -->
+        <div style="margin-bottom:22px">
+          <h2 style="font-size:0.8rem;font-weight:900;color:var(--sd-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">\uD83D\uDCDA Subject Progress</h2>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:12px">
+            ${subjectCardsHtml}
           </div>
-          <i class="ph-bold ph-arrow-right" style="font-size:18px;color:#E8562A"></i>
         </div>
+
+        <!-- Keep Going -->
+        <div style="margin-bottom:22px">
+          <h2 style="font-size:0.8rem;font-weight:900;color:var(--sd-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">\u26A1 Keep Going</h2>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            ${keepGoingHtml}
+          </div>
+        </div>
+
+        <!-- Recent Activity + Badges (two-column) -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:22px">
+          <div style="background:var(--sd-card);border:1.5px solid var(--sd-border);border-radius:20px;padding:20px 22px">
+            <h2 style="font-size:0.8rem;font-weight:900;color:var(--sd-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px">\uD83D\uDD52 Recent Activity</h2>
+            ${recentHtml}
+          </div>
+          <div style="background:var(--sd-card);border:1.5px solid var(--sd-border);border-radius:20px;padding:20px 22px">
+            <h2 style="font-size:0.8rem;font-weight:900;color:var(--sd-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px">\uD83C\uDFC5 Badges &amp; Rewards</h2>
+            <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:6px">
+              ${badgesHtml}
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>`;
 };
+
+// ── Student Home (Airbnb-style) ────────────────────────────────────────────
+Views.studentHome = function() {
+
+  // ── helpers ──────────────────────────────────────────────────────────────
+  // 10-gradient cycling palette (one per lesson index)
+  var CARD_GRADIENTS = [
+    'linear-gradient(135deg,#E8562A,#fb923c)',
+    'linear-gradient(135deg,#059669,#34d399)',
+    'linear-gradient(135deg,#7c3aed,#a78bfa)',
+    'linear-gradient(135deg,#0369a1,#38bdf8)',
+    'linear-gradient(135deg,#D97706,#fbbf24)',
+    'linear-gradient(135deg,#dc2626,#f87171)',
+    'linear-gradient(135deg,#0891b2,#67e8f9)',
+    'linear-gradient(135deg,#be185d,#f9a8d4)',
+    'linear-gradient(135deg,#4f46e5,#818cf8)',
+    'linear-gradient(135deg,#16a34a,#86efac)',
+  ];
+  var _cardIdx = 0;
+  function nextGradient() { return CARD_GRADIENTS[_cardIdx++ % CARD_GRADIENTS.length]; }
+
+  function lessonIcon(lesson) {
+    var t = (lesson.title || '').toLowerCase();
+    var ph = '';
+    if (t.includes('multipli'))               ph = 'ph-x';
+    else if (t.includes('division')||t.includes('divid')) ph = 'ph-divide';
+    else if (t.includes('fraction'))          ph = 'ph-chart-pie-slice';
+    else if (t.includes('decimal'))           ph = 'ph-number-nine';
+    else if (t.includes('ratio')||t.includes('scale'))   ph = 'ph-scales';
+    else if (t.includes('algebra'))           ph = 'ph-function';
+    else if (t.includes('geometry')||t.includes('shape')) ph = 'ph-hexagon';
+    else if (t.includes('percent'))           ph = 'ph-percent';
+    else if (t.includes('cell'))              ph = 'ph-microscope';
+    else if (t.includes('ecosystem'))         ph = 'ph-tree';
+    else if (t.includes('earth'))             ph = 'ph-globe-hemisphere-west';
+    else if (t.includes('atom')||t.includes('physical'))  ph = 'ph-atom';
+    else if (t.includes('life')||t.includes('living'))    ph = 'ph-leaf';
+    else if (t.includes('greeting')||t.includes('hello')) ph = 'ph-hand-waving';
+    else if (t.includes('number'))            ph = 'ph-number-square-three';
+    else if (t.includes('color')||t.includes('colour'))  ph = 'ph-palette';
+    else if (t.includes('grammar'))           ph = 'ph-pencil-simple';
+    else if (t.includes('reading'))           ph = 'ph-book-open';
+    else if (t.includes('writing'))           ph = 'ph-pencil-line';
+    else if (t.includes('ancient')||t.includes('histor')) ph = 'ph-columns';
+    else if (t.includes('war')||t.includes('revolution')) ph = 'ph-flag';
+    else {
+      var defaults = {math:'ph-calculator',science:'ph-flask',spanish:'ph-chat-circle',ela:'ph-book',history:'ph-scroll'};
+      ph = defaults[lesson.subject] || 'ph-book';
+    }
+    return '<i class="ph-bold ' + ph + '" style="font-size:3rem;color:rgba(255,255,255,0.95);filter:drop-shadow(0 2px 4px rgba(0,0,0,0.15))"></i>';
+  }
+
+  function subjectGradient(subject) {
+    var map = {
+      math:    'linear-gradient(135deg, #E8562A, #fb923c)',
+      science: 'linear-gradient(135deg, #059669, #34d399)',
+      spanish: 'linear-gradient(135deg, #D97706, #fbbf24)',
+      ela:     'linear-gradient(135deg, #7c3aed, #a78bfa)',
+      history: 'linear-gradient(135deg, #0369a1, #38bdf8)'
+    };
+    return map[subject] || 'linear-gradient(135deg, #6B7280, #9CA3AF)';
+  }
+
+  function subjectColor(subject) {
+    var map = {
+      math:    '#E8562A',
+      science: '#059669',
+      spanish: '#D97706',
+      ela:     '#7c3aed',
+      history: '#0369a1'
+    };
+    return map[subject] || '#6B7280';
+  }
+
+  function subjectLabel(subject) {
+    var map = {
+      math:    'MATH',
+      science: 'SCIENCE',
+      spanish: 'SPANISH',
+      ela:     'LANGUAGE ARTS',
+      history: 'HISTORY'
+    };
+    return map[subject] || (subject || '').toUpperCase();
+  }
+
+  function difficultyDots(d) {
+    var dots = '';
+    for (var i = 1; i <= 3; i++) {
+      dots += '<span style="width:7px;height:7px;border-radius:50%;background:' +
+        (i <= d ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.3)') + ';display:inline-block"></span>';
+    }
+    return dots;
+  }
+
+  function makeCard(lesson, progress, assignedIds) {
+    var isDone    = !!(progress[lesson.id] && progress[lesson.id].completed);
+    var isAssigned = assignedIds && assignedIds.indexOf(lesson.id) !== -1;
+    var emoji     = lessonIcon(lesson);
+    var gradient  = nextGradient();
+    var color     = subjectColor(lesson.subject);
+    var label     = subjectLabel(lesson.subject);
+    var diff      = lesson.difficulty || 1;
+    var meta      = '';
+    if (lesson.grade)  meta = 'Grade ' + lesson.grade;
+    else if (lesson.level) meta = lesson.level.charAt(0).toUpperCase() + lesson.level.slice(1);
+
+    var doneBadge = isDone
+      ? '<div style="position:absolute;top:10px;left:10px;background:rgba(255,255,255,0.92);border-radius:999px;padding:3px 10px;font-size:0.7rem;font-weight:800;color:#059669">✓ Done</div>'
+      : '';
+    var assignedBadge = isAssigned && !isDone
+      ? '<div style="position:absolute;top:10px;left:10px;background:rgba(79,70,229,0.92);border-radius:999px;padding:3px 10px;font-size:0.7rem;font-weight:800;color:white">📌 Assigned</div>'
+      : '';
+
+    return '<div class="lc" onclick="App.go(\'lesson/' + lesson.id + '\')" style="' +
+      'width:240px;flex-shrink:0;cursor:pointer;border-radius:16px;overflow:hidden;' +
+      'background:white;box-shadow:0 2px 8px rgba(0,0,0,0.08)">' +
+      '<div style="height:160px;background:' + gradient + ';display:flex;align-items:center;justify-content:center;position:relative">' +
+        emoji +
+        (isDone ? doneBadge : (isAssigned ? assignedBadge : '')) +
+        '<div style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.4);border-radius:999px;padding:3px 10px;display:flex;gap:3px;align-items:center">' +
+          difficultyDots(diff) +
+        '</div>' +
+      '</div>' +
+      '<div style="padding:12px 14px 14px">' +
+        '<div style="font-size:0.7rem;font-weight:700;color:' + color + ';margin-bottom:4px">' + label + '</div>' +
+        '<div style="font-size:0.92rem;font-weight:800;line-height:1.3;margin-bottom:6px">' + (lesson.title || '') + '</div>' +
+        '<div style="font-size:0.75rem;color:#6B7280">' + meta + (meta ? ' · ' : '') + '5 questions</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function row(title, link, cards) {
+    var seeAll = link
+      ? '<a href="#' + link + '" style="font-size:0.85rem;font-weight:700;color:#E8562A;text-decoration:none">See all →</a>'
+      : '';
+    return '<div style="margin-bottom:36px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:0 32px;margin-bottom:14px">' +
+        '<h2 style="font-size:1.25rem;font-weight:900;margin:0">' + title + '</h2>' +
+        seeAll +
+      '</div>' +
+      '<div class="sh-row" style="display:flex;gap:16px;overflow-x:auto;padding:4px 32px 12px;scrollbar-width:none;-webkit-overflow-scrolling:touch">' +
+        cards +
+      '</div>' +
+    '</div>';
+  }
+
+  // ── data ──────────────────────────────────────────────────────────────────
+  var progress = {};
+  try { progress = JSON.parse(localStorage.getItem('learnedu-progress') || '{}'); } catch(e) {}
+
+  var xpState = { total: 0, streak: 0, lastDate: null };
+  try { xpState = XP.getState(); } catch(e) {}
+
+  var user = {};
+  try { user = App.getUser() || {}; } catch(e) {}
+
+  var mathLessons = [], sciLessons = [], spaLessons = [], elaLessons = [], histLessons = [];
+  try { mathLessons = (typeof MATH_LESSONS    !== 'undefined') ? MATH_LESSONS    : []; } catch(e) {}
+  try { sciLessons  = (typeof SCIENCE_LESSONS !== 'undefined') ? SCIENCE_LESSONS : []; } catch(e) {}
+  try { spaLessons  = (typeof SPANISH_LESSONS !== 'undefined') ? SPANISH_LESSONS : []; } catch(e) {}
+  try { elaLessons  = (typeof ELA_LESSONS     !== 'undefined') ? ELA_LESSONS     : []; } catch(e) {}
+  try { histLessons = (typeof HISTORY_LESSONS !== 'undefined') ? HISTORY_LESSONS : []; } catch(e) {}
+
+  var allLessons = [].concat(mathLessons, sciLessons, spaLessons, elaLessons, histLessons);
+
+  var ASSIGNED = [
+    { id: 'math-4-multiplication', assignedBy: 'Ms. Rivera',   assignedDate: 'Apr 28' },
+    { id: 'math-5-fractions',      assignedBy: 'Ms. Rivera',   assignedDate: 'Apr 29' },
+    { id: 'science-4-ecosystems',  assignedBy: 'Mr. Thompson', assignedDate: 'Apr 27' }
+  ];
+  var assignedIds = ASSIGNED.map(function(a) { return a.id; });
+
+  var completedCount = Object.values(progress).filter(function(v) { return v.completed; }).length;
+  var userName  = user.name || 'Student';
+  var firstName = userName.split(' ')[0];
+  var hour      = new Date().getHours();
+  var greeting  = hour < 12 ? 'Good morning' : (hour < 17 ? 'Good afternoon' : 'Good evening');
+  var xpTotal   = xpState.total   || 0;
+  var streak    = xpState.streak  || 0;
+
+  // ── register search helper ─────────────────────────────────────────────────
+  window.SHL = {
+    search: function(q) {
+      q = q.toLowerCase();
+      document.querySelectorAll('.lc').forEach(function(card) {
+        card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    }
+  };
+
+  // ── build sections ─────────────────────────────────────────────────────────
+
+  // Assigned cards
+  var assignedCards = '';
+  ASSIGNED.forEach(function(a) {
+    var lesson = allLessons.find(function(l) { return l.id === a.id; });
+    if (lesson) assignedCards += makeCard(lesson, progress, assignedIds);
+    else {
+      // fallback stub
+      assignedCards += '<div class="lc" style="width:240px;flex-shrink:0;border-radius:16px;overflow:hidden;background:white;box-shadow:0 2px 8px rgba(0,0,0,0.08)">' +
+        '<div style="height:160px;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:3rem">📌</div>' +
+        '<div style="padding:12px 14px 14px"><div style="font-size:0.7rem;font-weight:700;color:#4f46e5;margin-bottom:4px">ASSIGNED</div>' +
+        '<div style="font-size:0.85rem;font-weight:700">' + a.id + '</div>' +
+        '<div style="font-size:0.75rem;color:#6B7280">by ' + a.assignedBy + ' · ' + a.assignedDate + '</div></div></div>';
+    }
+  });
+
+  // Continue: recently touched lessons (last 6 with progress)
+  var continueIds = Object.keys(progress)
+    .filter(function(id) { return progress[id] && !progress[id].completed; })
+    .slice(0, 6);
+  var continueCards = '';
+  continueIds.forEach(function(id) {
+    var lesson = allLessons.find(function(l) { return l.id === id; });
+    if (lesson) continueCards += makeCard(lesson, progress, null);
+  });
+  if (!continueCards) {
+    // show first 3 math lessons as suggestions
+    mathLessons.slice(0, 3).forEach(function(l) { continueCards += makeCard(l, progress, null); });
+  }
+
+  // Subject rows
+  function subjectRow(title, icon, link, lessons, limit) {
+    var cards = '';
+    lessons.slice(0, limit || 10).forEach(function(l) { cards += makeCard(l, progress, null); });
+    return cards ? row(icon + ' ' + title + '  →', link, cards) : '';
+  }
+
+  // ── Greeting bar ──────────────────────────────────────────────────────────
+  var greetingBar =
+    '<div style="padding:28px 32px 20px;border-bottom:1px solid #f0f0f0;background:white;position:sticky;top:0;z-index:10">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">' +
+        '<div>' +
+          '<h1 style="font-size:1.5rem;font-weight:900;margin:0 0 4px">' + greeting + ', ' + firstName + ' 👋</h1>' +
+          '<p style="font-size:0.85rem;color:#6B7280;margin:0">' + xpTotal + ' XP · 🔥 ' + streak + ' day streak · ' + completedCount + ' lessons done</p>' +
+        '</div>' +
+        '<div style="display:flex;gap:10px;align-items:center">' +
+          '<input placeholder="Search lessons…" oninput="SHL.search(this.value)" ' +
+            'style="border:1.5px solid #e5e7eb;border-radius:999px;padding:9px 18px;font-size:0.84rem;font-family:inherit;outline:none;width:220px">' +
+          '<button onclick="App.go(\'dashboard/student\')" ' +
+            'style="background:#f3f4f6;border:none;border-radius:999px;padding:9px 18px;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit">' +
+            'Dashboard →' +
+          '</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  // ── Spark banner ──────────────────────────────────────────────────────────
+  var sparkBanner =
+    '<div style="margin:0 32px 36px;border-radius:24px;background:linear-gradient(135deg,#4f46e5,#7c3aed,#E8562A);padding:32px 40px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;color:white">' +
+      '<div>' +
+        '<div style="font-size:0.8rem;font-weight:800;opacity:0.8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">⚡ SPARK ASSESSMENT</div>' +
+        '<h2 style="font-size:1.5rem;font-weight:900;margin:0 0 8px">See where you stand</h2>' +
+        '<p style="opacity:0.85;margin:0;font-size:0.9rem">60-question diagnostic across Math, Science &amp; Spanish. Takes 5–10 minutes.</p>' +
+      '</div>' +
+      '<button onclick="App.go(\'spark/play\')" style="background:white;color:#4f46e5;border:none;border-radius:14px;padding:14px 28px;font-size:0.95rem;font-weight:900;cursor:pointer;font-family:inherit;white-space:nowrap;transition:transform 0.15s">' +
+        'Take Spark ⚡' +
+      '</button>' +
+    '</div>';
+
+  // ── Nav ───────────────────────────────────────────────────────────────────
+  var nav =
+    '<nav style="display:flex;align-items:center;justify-content:space-between;padding:16px 32px;border-bottom:1px solid #f0f0f0;background:white">' +
+      '<div style="display:flex;align-items:center;gap:10px">' +
+        '<img src="logo.svg" alt="Learn.edu" style="height:34px;width:34px;object-fit:contain">' +
+        '<span style="font-weight:900;font-size:1rem;letter-spacing:-0.3px">Learn.edu</span>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;gap:8px">' +
+        '<a href="#study" style="font-size:0.85rem;font-weight:600;color:#374151;text-decoration:none;padding:7px 14px;border-radius:8px">Study Tools</a>' +
+        '<a href="#spark/play" style="font-size:0.85rem;font-weight:700;color:#7c3aed;text-decoration:none;padding:7px 14px;border-radius:8px;background:#f5f3ff">⚡ Spark</a>' +
+        '<div onclick="App.go(\'dashboard/student\')" style="display:flex;align-items:center;gap:7px;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:999px;padding:5px 14px 5px 8px;cursor:pointer">' +
+          '<div style="width:24px;height:24px;border-radius:50%;background:#E8562A;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:900;color:white">' + firstName[0].toUpperCase() + '</div>' +
+          '<span style="font-size:0.82rem;font-weight:700">' + firstName + '</span>' +
+        '</div>' +
+      '</div>' +
+    '</nav>';
+
+  // ── My Path sidebar data ──────────────────────────────────────────────────
+  var allForPath = mathLessons.concat(sciLessons).concat(spaLessons).concat(elaLessons).concat(histLessons);
+  var pathLessons = allForPath.filter(function(l) { return !progress[l.id] || !progress[l.id].completed; }).slice(0, 8);
+  var pathItems = '';
+  pathLessons.forEach(function(l, i) {
+    var subj = l.subject || 'math';
+    var pcolor = ({math:'#E8562A',science:'#059669',spanish:'#D97706',ela:'#7c3aed',history:'#0369a1'})[subj] || '#6B7280';
+    var pmeta = l.grade ? 'Grade ' + l.grade : (l.level ? l.level.charAt(0).toUpperCase() + l.level.slice(1) : '');
+    var psubj = ({math:'Math',science:'Science',spanish:'Spanish',ela:'ELA',history:'History'})[subj] || subj;
+    var pathRoute = 'lesson/' + l.id;
+    pathItems += '<div class="path-item" onclick="App.go(\'' + pathRoute + '\')" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:12px;cursor:pointer">' +
+      '<div style="width:26px;height:26px;border-radius:8px;background:' + pcolor + '18;border:1.5px solid ' + pcolor + '44;display:flex;align-items:center;justify-content:center;flex-shrink:0">' +
+        '<span style="font-size:0.65rem;font-weight:900;color:' + pcolor + '">' + (i+1) + '</span>' +
+      '</div>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:0.82rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (l.title || l.id) + '</div>' +
+        '<div style="font-size:0.68rem;color:#9ca3af">' + psubj + (pmeta ? ' · ' + pmeta : '') + '</div>' +
+      '</div>' +
+      '<i class="ph-bold ph-caret-right" style="font-size:11px;color:#d1d5db;flex-shrink:0"></i>' +
+    '</div>';
+  });
+  var todayDone = Object.keys(progress).filter(function(id) {
+    var d = progress[id] && progress[id].date;
+    return d && new Date(d).toDateString() === new Date().toDateString() && progress[id].completed;
+  }).length;
+  var sidebar =
+    '<div style="width:300px;flex-shrink:0;padding:0 32px 0 0;display:flex;flex-direction:column;gap:14px">' +
+      '<div style="background:white;border-radius:20px;padding:18px 16px;box-shadow:0 2px 12px rgba(0,0,0,0.07)">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">' +
+          '<i class="ph-bold ph-path" style="font-size:1rem;color:#E8562A"></i>' +
+          '<span style="font-size:0.95rem;font-weight:900">My Path</span>' +
+          '<span style="margin-left:auto;font-size:0.68rem;color:#9ca3af;font-weight:600">' + pathLessons.length + ' lessons up next</span>' +
+        '</div>' +
+        (pathItems || '<p style="font-size:0.85rem;color:#9ca3af;text-align:center;padding:12px 0">All caught up! 🎉</p>') +
+      '</div>' +
+      '<div style="background:' + (todayDone>=1?'#dcfce7':'#fff7ed') + ';border-radius:20px;padding:16px 18px;border:1.5px solid ' + (todayDone>=1?'#bbf7d0':'#fed7aa') + '">' +
+        '<div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:' + (todayDone>=1?'#166534':'#c2410c') + ';margin-bottom:6px">📅 Today\'s Goal</div>' +
+        '<div style="font-size:0.95rem;font-weight:900;color:' + (todayDone>=1?'#14532d':'#7c2d12') + ';margin-bottom:3px">' + (todayDone>=1?'✅ Goal complete!':'Complete 1 lesson') + '</div>' +
+        '<div style="font-size:0.75rem;color:' + (todayDone>=1?'#166534':'#9a3412') + '">' + (todayDone>=1?'Great work today! Keep going.':'You\'ve done ' + todayDone + '/1 today') + '</div>' +
+      '</div>' +
+      '<div style="background:linear-gradient(135deg,#1e1b4b,#312e81);border-radius:20px;padding:16px 18px;color:white">' +
+        '<div style="font-size:0.68rem;font-weight:800;opacity:0.7;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">⚡ Spark Assessment</div>' +
+        '<div style="font-size:0.9rem;font-weight:900;margin-bottom:4px">Next window: September</div>' +
+        '<div style="font-size:0.75rem;opacity:0.8;line-height:1.4">PM1 opens in September, PM2 in February. District-scheduled.</div>' +
+      '</div>' +
+    '</div>';
+
+// ── assemble page ─────────────────────────────────────────────────────────
+  var content = nav + greetingBar;
+  content += '<div style="padding-top:28px">';
+  // Two-column: main content + sidebar
+  content += '<div style="display:flex;align-items:flex-start">';
+  content +=   '<div style="flex:1;min-width:0;overflow:hidden">';
+  content +=     row('<i class="ph-bold ph-push-pin" style="font-size:1.1rem;color:#4f46e5;vertical-align:-2px"></i> From your teacher', null, assignedCards);
+  content +=     row('<i class="ph-bold ph-arrow-right" style="font-size:1.1rem;color:#E8562A;vertical-align:-2px"></i> Pick up where you left off', null, continueCards);
+  content +=   '</div>';
+  content +=   sidebar;
+  content += '</div>';
+  // Full-width subject rows
+  content += subjectRow('Math',          '<i class="ph-bold ph-calculator" style="font-size:1.1rem;vertical-align:-2px"></i>', 'subject/math/4',             mathLessons,  12);
+  content += subjectRow('Science',       '<i class="ph-bold ph-flask" style="font-size:1.1rem;vertical-align:-2px"></i>',       'subject/science/earth',      sciLessons,   12);
+  content += subjectRow('Spanish',       '<i class="ph-bold ph-chat-circle" style="font-size:1.1rem;vertical-align:-2px"></i>', 'subject/spanish/beginning',  spaLessons,   12);
+  content += subjectRow('Language Arts', '<i class="ph-bold ph-book-open" style="font-size:1.1rem;vertical-align:-2px"></i>',   'subject/ela/beginning',      elaLessons,   12);
+  content += subjectRow('History',       '<i class="ph-bold ph-scroll" style="font-size:1.1rem;vertical-align:-2px"></i>',      'subject/history/ancient',    histLessons,  12);
+  content += '</div>';
+
+  // Force full-screen: add sh-full to #app, cleaned up on next route
+  try {
+    var _a = document.getElementById('app');
+    if (_a) { _a.classList.add('sh-full'); }
+  } catch(e) {}
+
+  var doodles = '<div style="position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden">' +
+    '<i class="ph-bold ph-math-operations doodle d1" style="position:absolute;top:8%;left:2%;font-size:110px;color:#E8562A22"></i>' +
+    '<i class="ph-bold ph-flask doodle d2" style="position:absolute;top:15%;right:2%;font-size:96px;color:#05966922"></i>' +
+    '<i class="ph-bold ph-book-open doodle d3" style="position:absolute;top:40%;left:1%;font-size:92px;color:#7c3aed22"></i>' +
+    '<i class="ph-bold ph-globe-hemisphere-west doodle d4" style="position:absolute;top:60%;right:1%;font-size:104px;color:#D9770622"></i>' +
+    '<i class="ph-bold ph-calculator doodle d5" style="position:absolute;top:76%;left:2%;font-size:94px;color:#0369a122"></i>' +
+    '<i class="ph-bold ph-atom doodle d6" style="position:absolute;top:4%;right:24%;font-size:112px;color:#05966920"></i>' +
+    '<i class="ph-bold ph-chart-pie-slice doodle d7" style="position:absolute;top:86%;right:4%;font-size:88px;color:#E8562A20"></i>' +
+    '<i class="ph-bold ph-pencil-simple doodle d8" style="position:absolute;top:32%;right:1%;font-size:84px;color:#4f46e522"></i>' +
+    '<i class="ph-bold ph-scroll doodle d1" style="position:absolute;top:52%;left:44%;font-size:80px;color:#be185d1e"></i>' +
+    '<i class="ph-bold ph-hand-waving doodle d3" style="position:absolute;top:68%;left:18%;font-size:90px;color:#D9770620"></i>' +
+    '<i class="ph-bold ph-hexagon doodle d2" style="position:absolute;top:25%;left:42%;font-size:76px;color:#4f46e51a"></i>' +
+    '<i class="ph-bold ph-tree doodle d4" style="position:absolute;top:90%;left:35%;font-size:86px;color:#05966918"></i>' +
+  '</div>';
+  return '<div style="position:relative;font-family:inherit;min-height:100vh;background:#fafafa;width:100%">' + doodles + '<div style="position:relative;z-index:1">' + content + '</div></div>';
+};
+
 
 // ── Teacher Dashboard ─────────────────────────────────────────
 
@@ -2905,7 +3605,6 @@ Views.dashboardTeacher = function(tab) {
             <h1 style="font-size:1.5rem;font-weight:900;color:#111;letter-spacing:-0.5px;margin-top:1px">Welcome, ${firstName}</h1>
           </div>
           <div style="display:flex;gap:7px;align-items:center">
-            <button onclick="App.go('dashboard/teacher/spark')" style="display:flex;align-items:center;gap:5px;background:#7c3aed;color:white;border:none;border-radius:9px;padding:8px 14px;font-weight:800;font-size:0.8rem;cursor:pointer;font-family:inherit">⚡ Spark Requests</button>
             <button onclick="App.go('assign')" style="display:flex;align-items:center;gap:5px;background:#E8562A;color:white;border:none;border-radius:9px;padding:8px 14px;font-weight:800;font-size:0.8rem;cursor:pointer;font-family:inherit">+ Assign Lesson</button>
             <button onclick="App.go('subject/math/4')" style="background:#f3f4f6;color:#374151;border:none;border-radius:9px;padding:8px 12px;font-weight:700;font-size:0.8rem;cursor:pointer;font-family:inherit">👁️ Preview</button>
             <button onclick="App.logout()" style="background:none;border:1.5px solid #e5e7eb;color:#6b7280;border-radius:9px;padding:7px 12px;font-size:0.76rem;font-weight:700;cursor:pointer;font-family:inherit">Sign Out</button>
@@ -2917,7 +3616,6 @@ Views.dashboardTeacher = function(tab) {
             {id:'classes',     label:'My Classes'},
             {id:'students',    label:'My Students'},
             {id:'assignments', label:'Assignments'},
-            {id:'spark',       label:'⚡ Spark'},
             {id:'struggling',  label:'🚨 Needs Attention', badge: struggling.length},
           ].map(t => `
             <button onclick="App.go('dashboard/teacher/${t.id}')" style="padding:9px 16px;border:none;border-bottom:3px solid ${t.id===tab?'#E8562A':'transparent'};background:none;font-weight:${t.id===tab?'800':'600'};font-size:0.82rem;color:${t.id===tab?'#E8562A':'#6b7280'};cursor:pointer;font-family:inherit;white-space:nowrap;display:inline-flex;align-items:center;gap:4px">
@@ -2955,7 +3653,6 @@ Views.dashboardTeacher = function(tab) {
         <h2 style="font-size:0.88rem;font-weight:900;color:#374151;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em">Teaching</h2>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
           ${actionCard('#E8562A','📋','Quick Assign →','Pick a lesson, set a due date, assign to your periods.','assign')}
-          ${actionCard('#7c3aed','⚡','Request Spark →','Submit a Spark assessment request to your admin.','dashboard/teacher/spark')}
           ${actionCard('#059669','📊','Assignment Report →','Track who has and hasn\'t completed their work.','dashboard/teacher/assignments')}
           ${actionCard('#0369a1','📚','Browse Resources →','Flashcards, quiz mode, test prep and more.','study')}
         </div>
@@ -2982,64 +3679,6 @@ Views.dashboardTeacher = function(tab) {
           <button onclick="App.go('dashboard/teacher/students')" style="background:none;border:none;font-size:0.73rem;font-weight:700;color:#E8562A;cursor:pointer">View all students →</button>
         </div>
       </div>
-    </div>`);
-
-  // ── SPARK TAB — teacher requests, admin activates ──
-  const sparkRequests = JSON.parse(localStorage.getItem('learnedu-spark-requests') || '[]');
-  const sparkTab = wrap(`
-    <div style="max-width:700px">
-      <div style="background:#f5f3ff;border:1.5px solid #ddd6fe;border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;gap:12px;align-items:flex-start">
-        <span style="font-size:1.3rem">ℹ️</span>
-        <p style="font-size:0.84rem;color:#374151;font-weight:600;line-height:1.5;margin:0">Spark assessments are <strong>activated by your Admin</strong> using the district code. You can submit a request here and your admin will open it for your class.</p>
-      </div>
-      <div style="background:white;border-radius:14px;border:1.5px solid #e5e7eb;padding:20px;margin-bottom:18px">
-        <h3 style="font-size:0.95rem;font-weight:900;margin-bottom:16px">⚡ Request a Spark Assessment</h3>
-        <form onsubmit="App.submitSparkRequest(event)" style="display:flex;flex-direction:column;gap:14px">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div>
-              <label style="display:block;font-size:0.8rem;font-weight:800;margin-bottom:6px">Subject</label>
-              <select name="subject" style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:9px;font-family:inherit;font-weight:600;font-size:0.85rem">
-                <option>Math</option><option>Science</option><option>Spanish</option><option>All Subjects</option>
-              </select>
-            </div>
-            <div>
-              <label style="display:block;font-size:0.8rem;font-weight:800;margin-bottom:6px">Period(s)</label>
-              <select name="period" style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:9px;font-family:inherit;font-weight:600;font-size:0.85rem">
-                <option>All Periods</option>${PERIODS.map(p=>`<option>${p.name}</option>`).join('')}
-              </select>
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div>
-              <label style="display:block;font-size:0.8rem;font-weight:800;margin-bottom:6px">Requested Date</label>
-              <input name="date" type="date" style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:9px;font-family:inherit;font-size:0.85rem;box-sizing:border-box">
-            </div>
-            <div>
-              <label style="display:block;font-size:0.8rem;font-weight:800;margin-bottom:6px">Assessment Type</label>
-              <select name="type" style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:9px;font-family:inherit;font-weight:600;font-size:0.85rem">
-                <option>PM Checkpoint</option><option>Unit Review</option><option>End of Year Prep</option><option>Quick Check-In</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label style="display:block;font-size:0.8rem;font-weight:800;margin-bottom:6px">Note to Admin (optional)</label>
-            <textarea name="note" placeholder="e.g. Period 3 just finished the ratios unit — good time for a math check" style="width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:9px;font-family:inherit;font-size:0.85rem;box-sizing:border-box;height:72px;resize:none"></textarea>
-          </div>
-          <button type="submit" style="background:#7c3aed;color:white;border:none;border-radius:10px;padding:12px;font-weight:900;font-size:0.88rem;cursor:pointer;font-family:inherit">Submit Request to Admin</button>
-        </form>
-      </div>
-      ${sparkRequests.length ? `
-        <div style="background:white;border-radius:14px;border:1.5px solid #e5e7eb;padding:18px">
-          <h3 style="font-size:0.9rem;font-weight:900;margin-bottom:12px">Your Requests</h3>
-          ${sparkRequests.map(r=>`
-            <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f3f4f6">
-              <div style="flex:1">
-                <div style="font-weight:800;font-size:0.85rem">${r.subject} · ${r.period}</div>
-                <div style="font-size:0.72rem;color:#9ca3af">${r.type} · Requested for ${r.date||'TBD'}</div>
-              </div>
-              <span style="background:${r.status==='Approved'?'#dcfce7':r.status==='Denied'?'#fee2e2':'#fef3c7'};color:${r.status==='Approved'?'#059669':r.status==='Denied'?'#dc2626':'#d97706'};padding:3px 10px;border-radius:999px;font-size:0.7rem;font-weight:800">${r.status||'Pending'}</span>
-            </div>`).join('')}
-        </div>` : ''}
     </div>`);
 
   // ── ASSIGNMENTS TAB ──
@@ -3141,7 +3780,7 @@ Views.dashboardTeacher = function(tab) {
       </div>`;
     }).join('')}`);
 
-  const bodyMap = {dashboard:dashTab, classes:classesTab, students:studentsTab, assignments:assignmentsTab, spark:sparkTab, struggling:strugglingTab};
+  const bodyMap = {dashboard:dashTab, classes:classesTab, students:studentsTab, assignments:assignmentsTab, struggling:strugglingTab};
 
   return `
     <style>
@@ -3192,242 +3831,357 @@ Views.assignCreate = function(step, subject, levelOrGrade) {
 
 Views.dashboardAdmin = function(tab) {
   tab = tab || 'overview';
-  const sColor = s => ({math:'var(--math)',science:'var(--sci)',spanish:'var(--spa)'})[s]||'#888';
-  const sBg    = s => ({math:'var(--math-bg)',science:'var(--sci-bg)',spanish:'var(--spa-bg)'})[s]||'#f5f5f5';
-  const lessons = [
-    {title:'Multiplication', subj:'math',    plays:142, rating:94,  id:'math-4-multiplication',  status:'live'},
-    {title:'Fractions',      subj:'math',    plays:118, rating:87,  id:'math-5-fractions-intro', status:'live'},
-    {title:'Ecosystems',     subj:'science', plays:103, rating:91,  id:'sci-4-ecosystems',       status:'live'},
-    {title:'Cell Biology',   subj:'science', plays:97,  rating:85,  id:'sci-5-cells',            status:'live'},
-    {title:'Greetings',      subj:'spanish', plays:134, rating:96,  id:'spa-4-greetings',        status:'live'},
-    {title:'Numbers 1-20',   subj:'spanish', plays:88,  rating:89,  id:'spa-4-numbers',          status:'live'},
-    {title:'Long Division',  subj:'math',    plays:76,  rating:82,  id:'math-4-long-division',   status:'live'},
-    {title:'Decimals',       subj:'math',    plays:65,  rating:88,  id:'math-5-decimals-intro',  status:'live'},
-    {title:'Ratios',         subj:'math',    plays:54,  rating:79,  id:'math-6-ratios',          status:'live'},
-    {title:'Geometry',       subj:'math',    plays:38,  rating:90,  id:'math-4-geometry',        status:'live'},
-    {title:'Percentages',    subj:'math',    plays:29,  rating:85,  id:'math-5-percentages',     status:'live'},
-    {title:'Integers',       subj:'math',    plays:21,  rating:88,  id:'math-6-integers',        status:'live'},
-    {title:'Algebra Intro',  subj:'math',    plays:18,  rating:86,  id:'math-7-algebra-intro',   status:'live'},
-    {title:'Linear Equations',subj:'math',   plays:14,  rating:84,  id:'math-8-linear-equations',status:'live'},
-    {title:'Weather Cycle',  subj:'science', plays:45,  rating:92,  id:'sci-4-weather',          status:'live'},
-    {title:'Forces & Motion',subj:'science', plays:33,  rating:87,  id:'sci-5-forces',           status:'live'},
-    {title:'Matter & States',subj:'science', plays:26,  rating:89,  id:'sci-6-matter',           status:'live'},
-    {title:"Earth's Layers", subj:'science', plays:19,  rating:91,  id:'sci-7-layers',           status:'live'},
-    {title:'Family Vocab',   subj:'spanish', plays:41,  rating:93,  id:'spa-4-family',           status:'live'},
-    {title:'Food & Dining',  subj:'spanish', plays:36,  rating:91,  id:'spa-5-food',             status:'live'},
-    {title:'Colors & Adj.',  subj:'spanish', plays:31,  rating:94,  id:'spa-5-colors',           status:'live'},
-    {title:'Action Verbs',   subj:'spanish', plays:24,  rating:88,  id:'spa-6-verbs',            status:'live'},
+
+  function wrap(html) {
+    return '<div style="padding:0 0 40px">' + html + '</div>';
+  }
+  function sectionHead(title, sub) {
+    return '<div style="margin-bottom:20px"><h2 style="font-size:1.1rem;font-weight:900;margin-bottom:4px">' + title + '</h2>' +
+      (sub ? '<p style="font-size:0.82rem;color:var(--muted);margin:0">' + sub + '</p>' : '') + '</div>';
+  }
+  function statPill(val, label, color) {
+    color = color || '#E8562A';
+    return '<div style="background:white;border-radius:16px;padding:18px 20px;box-shadow:0 1px 6px rgba(0,0,0,0.07);text-align:center">' +
+      '<div style="font-size:1.8rem;font-weight:900;color:' + color + '">' + val + '</div>' +
+      '<div style="font-size:0.72rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-top:4px">' + label + '</div>' +
+      '</div>';
+  }
+  function actionBtn(color, icon, label, desc, route) {
+    return '<button onclick="App.go(\'' + route + '\')" style="background:' + color + '18;border:2px solid ' + color + '44;border-radius:14px;padding:16px 18px;cursor:pointer;font-family:inherit;text-align:left;width:100%">' +
+      '<div style="font-size:1.3rem;margin-bottom:6px">' + icon + '</div>' +
+      '<div style="font-size:0.9rem;font-weight:900;color:' + color + '">' + label + '</div>' +
+      '<div style="font-size:0.78rem;color:#6B7280;margin-top:3px;line-height:1.4">' + desc + '</div>' +
+      '</button>';
+  }
+
+  // ── MOCK DATA ────────────────────────────────────────────────
+  const SCHOOLS = [
+    { id:1, name:'Lincoln Middle School',    city:'Miami, FL',       teachers:12, students:348, avgSpark:74 },
+    { id:2, name:'Roosevelt Elementary',     city:'Miami, FL',       teachers:9,  students:210, avgSpark:81 },
+    { id:3, name:'Jefferson High School',    city:'Fort Lauderdale', teachers:18, students:512, avgSpark:68 },
+    { id:4, name:'Westside Academy',         city:'Hialeah, FL',     teachers:7,  students:189, avgSpark:77 },
+    { id:5, name:'Sunrise STEM Charter',     city:'Sunrise, FL',     teachers:11, students:264, avgSpark:83 },
   ];
-  const PM1_CLASSES = [
-    { name:'Period 3', grade:'5-6', students:24, mathAvg:78, sciAvg:81, spaAvg:84, improvement:3,  needs:3 },
-    { name:'Period 5', grade:'7',   students:22, mathAvg:71, sciAvg:74, spaAvg:69, improvement:-2, needs:5 },
-    { name:'Period 7', grade:'8',   students:18, mathAvg:84, sciAvg:79, spaAvg:77, improvement:6,  needs:2 },
+  const TEACHERS = [
+    { id:1, name:'Ms. Rivera',    school:'Lincoln Middle School',  subject:'Math',    classes:3, students:86,  status:'active' },
+    { id:2, name:'Mr. Thompson',  school:'Lincoln Middle School',  subject:'Science', classes:2, students:54,  status:'active' },
+    { id:3, name:'Ms. Chen',      school:'Roosevelt Elementary',   subject:'ELA',     classes:4, students:72,  status:'active' },
+    { id:4, name:'Mr. Patel',     school:'Jefferson High School',  subject:'Math',    classes:5, students:128, status:'active' },
+    { id:5, name:'Ms. Johnson',   school:'Westside Academy',       subject:'Spanish', classes:3, students:61,  status:'inactive' },
+    { id:6, name:'Dr. Williams',  school:'Sunrise STEM Charter',   subject:'Science', classes:4, students:88,  status:'active' },
   ];
+  const ROSTER = [
+    { id:1, name:'Alex M.',    school:'Lincoln Middle School', grade:6, teacher:'Ms. Rivera',   sparkCode:'6-B-78', pm1:'74', pm2:'78' },
+    { id:2, name:'Jordan K.',  school:'Lincoln Middle School', grade:7, teacher:'Mr. Thompson', sparkCode:'7-A-91', pm1:'88', pm2:'91' },
+    { id:3, name:'Taylor R.',  school:'Roosevelt Elementary',  grade:5, teacher:'Ms. Chen',     sparkCode:'5-C-62', pm1:'58', pm2:'62' },
+    { id:4, name:'Morgan P.',  school:'Jefferson High School', grade:9, teacher:'Mr. Patel',    sparkCode:'9-D-54', pm1:'49', pm2:'54' },
+    { id:5, name:'Casey W.',   school:'Westside Academy',      grade:6, teacher:'Ms. Johnson',  sparkCode:'6-B-75', pm1:'70', pm2:'75' },
+    { id:6, name:'Riley S.',   school:'Sunrise STEM Charter',  grade:8, teacher:'Dr. Williams', sparkCode:'8-A-88', pm1:'82', pm2:'88' },
+  ];
+  const SPARK_RESULTS = [
+    { student:'Alex M.',   school:'Lincoln Middle',   teacher:'Ms. Rivera',  grade:6, code:'6-B-78', math:80, sci:72, spa:76, date:'Apr 14' },
+    { student:'Jordan K.', school:'Lincoln Middle',   teacher:'Ms. Rivera',  grade:7, code:'7-A-91', math:94, sci:90, spa:88, date:'Apr 14' },
+    { student:'Taylor R.', school:'Roosevelt Elem',   teacher:'Ms. Chen',    grade:5, code:'5-C-62', math:58, sci:66, spa:62, date:'Apr 28' },
+    { student:'Morgan P.', school:'Jefferson High',   teacher:'Mr. Patel',   grade:9, code:'9-D-54', math:50, sci:58, spa:54, date:'Apr 28' },
+    { student:'Casey W.',  school:'Westside Academy', teacher:'Ms. Johnson', grade:6, code:'6-B-75', math:78, sci:70, spa:76, date:'Apr 21' },
+    { student:'Riley S.',  school:'Sunrise STEM',     teacher:'Dr. Williams',grade:8, code:'8-A-88', math:90, sci:88, spa:84, date:'Apr 21' },
+  ];
+
   const ASSESSMENTS = [
-    { name:'Spark PM1 - Fall 2026',    status:'closed', date:'Apr 14', classes:3, students:64, avgScore:78,   code:'SPK-PM1-F26' },
-    { name:'Spark PM2 - Spring 2026',  status:'open',   date:'Apr 28', classes:2, students:46, avgScore:null, code:'SPK-PM2-S26' },
-    { name:'Spark End-of-Year Prep',   status:'draft',  date:'--',     classes:0, students:0,  avgScore:null, code:'SPK-EOY-S26' },
+    { name:'Spark PM1 — Fall Window',   period:'September 2026', status:'scheduled', window:'Sep 1–30',  schools:5, notes:'Progress Monitoring 1. Baseline assessment for the school year.' },
+    { name:'Spark PM2 — Winter Window', period:'February 2027',  status:'scheduled', window:'Feb 1–28',  schools:5, notes:'Progress Monitoring 2. Mid-year growth check.' },
+    { name:'Spark PM1 — Fall 2025',     period:'September 2025', status:'closed',    window:'Sep 1–30',  schools:5, avgScore:76, notes:'PM1 complete. Results locked.' },
+    { name:'Spark PM2 — Spring 2026',   period:'April 2026',     status:'open',      window:'Apr 1–May 15', schools:5, notes:'Current active window. Submissions accepted.' },
   ];
-  const weeks = [42,55,61,78,84,97,112,124,138,143,156,162];
-  const maxW = Math.max(...weeks);
-  const sparkline = weeks.map((v,i) => `<div style="flex:1;background:#E8562A;border-radius:4px 4px 0 0;height:${Math.round(v/maxW*60)}px;opacity:${0.4+i/weeks.length*0.6}"></div>`).join('');
-  const tabsList = [
-    {id:'overview',    label:'Overview'},
-    {id:'assessments', label:'Assessments'},
-    {id:'pm1',         label:'PM1 Results'},
-    {id:'lessons',     label:'Lessons'},
-    {id:'system',      label:'System'},
+
+  // ── OVERVIEW TAB ─────────────────────────────────────────────
+  var overviewTab = wrap(
+    sectionHead('District Overview', 'Live data across all schools') +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:28px">' +
+      statPill('5', 'Schools', '#E8562A') +
+      statPill('57', 'Teachers', '#0369a1') +
+      statPill('1,523', 'Students', '#059669') +
+      statPill('76%', 'Avg Spark', '#7c3aed') +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px">' +
+      actionBtn('#E8562A','🏫','View Schools','Browse all district schools and stats','dashboard/admin/schools') +
+      actionBtn('#0369a1','👩‍🏫','Manage Teachers','Add teachers, assign classes, view data','dashboard/admin/teachers') +
+      actionBtn('#059669','📋','Student Roster','Add or import students district-wide','dashboard/admin/roster') +
+      actionBtn('#7c3aed','⚡','Spark Lookup','Search all Spark scores by student or school','dashboard/admin/spark') +
+      actionBtn('#d97706','📊','PM1 / PM2 Results','View scheduled assessment windows','dashboard/admin/assessments') +
+      actionBtn('#e11d48','✉️','Invite Staff','Send access invites to principals & admins','dashboard/admin/invite') +
+    '</div>' +
+    '<div style="background:white;border-radius:16px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,0.06)">' +
+      '<div style="font-size:0.75rem;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:14px">School Performance Summary</div>' +
+      SCHOOLS.map(function(s) {
+        var barColor = s.avgSpark >= 80 ? '#059669' : s.avgSpark >= 70 ? '#d97706' : '#dc2626';
+        return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6">' +
+          '<div style="flex:1">' +
+            '<div style="font-size:0.88rem;font-weight:800">' + s.name + '</div>' +
+            '<div style="font-size:0.72rem;color:#9ca3af">' + s.city + ' · ' + s.teachers + ' teachers · ' + s.students + ' students</div>' +
+          '</div>' +
+          '<div style="text-align:right">' +
+            '<div style="font-size:0.9rem;font-weight:900;color:' + barColor + '">' + s.avgSpark + '%</div>' +
+            '<div style="font-size:0.68rem;color:#9ca3af">avg spark</div>' +
+          '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>'
+  );
+
+  // ── SCHOOLS TAB ──────────────────────────────────────────────
+  var schoolsTab = wrap(
+    sectionHead('Schools', 'All schools in the district') +
+    '<div style="display:flex;justify-content:flex-end;margin-bottom:16px">' +
+      '<button onclick="alert(\'Add School form coming soon!\')" style="background:#E8562A;color:white;border:none;border-radius:10px;padding:9px 18px;font-size:0.82rem;font-weight:800;cursor:pointer;font-family:inherit">+ Add School</button>' +
+    '</div>' +
+    '<div style="display:flex;flex-direction:column;gap:12px">' +
+    SCHOOLS.map(function(s) {
+      var scoreColor = s.avgSpark >= 80 ? '#059669' : s.avgSpark >= 70 ? '#d97706' : '#dc2626';
+      return '<div style="background:white;border-radius:16px;padding:18px 20px;box-shadow:0 1px 6px rgba(0,0,0,0.06);display:flex;align-items:center;gap:16px">' +
+        '<div style="width:44px;height:44px;border-radius:12px;background:#E8562A18;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0">🏫</div>' +
+        '<div style="flex:1">' +
+          '<div style="font-size:0.95rem;font-weight:900">' + s.name + '</div>' +
+          '<div style="font-size:0.78rem;color:#6B7280;margin-top:2px">' + s.city + '</div>' +
+          '<div style="display:flex;gap:10px;margin-top:6px">' +
+            '<span style="font-size:0.72rem;background:#f3f4f6;border-radius:6px;padding:2px 8px;font-weight:700">' + s.teachers + ' teachers</span>' +
+            '<span style="font-size:0.72rem;background:#f3f4f6;border-radius:6px;padding:2px 8px;font-weight:700">' + s.students + ' students</span>' +
+          '</div>' +
+        '</div>' +
+        '<div style="text-align:center">' +
+          '<div style="font-size:1.3rem;font-weight:900;color:' + scoreColor + '">' + s.avgSpark + '%</div>' +
+          '<div style="font-size:0.65rem;color:#9ca3af;font-weight:700">AVG SPARK</div>' +
+        '</div>' +
+        '<button onclick="alert(\'School detail view coming soon\')" style="background:#f3f4f6;border:none;border-radius:8px;padding:7px 12px;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;color:#374151">View →</button>' +
+      '</div>';
+    }).join('') +
+    '</div>'
+  );
+
+  // ── TEACHERS TAB ─────────────────────────────────────────────
+  var teachersTab = wrap(
+    sectionHead('Teachers', 'All teachers across the district') +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px;flex-wrap:wrap">' +
+      '<input placeholder="Search teachers…" oninput="AdminPanel.filterTeachers(this.value)" style="border:1.5px solid #e5e7eb;border-radius:10px;padding:8px 14px;font-size:0.84rem;font-family:inherit;outline:none;flex:1;min-width:180px">' +
+      '<button onclick="AdminPanel.showAddTeacher()" style="background:#0369a1;color:white;border:none;border-radius:10px;padding:9px 18px;font-size:0.82rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap">+ Add Teacher</button>' +
+    '</div>' +
+    '<div id="admin-teacher-list" style="background:white;border-radius:16px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,0.06)">' +
+      '<div style="display:grid;grid-template-columns:2fr 2fr 1fr 1fr 80px;padding:10px 16px;background:#f9fafb;border-bottom:1px solid #f3f4f6">' +
+        '<span style="font-size:0.7rem;font-weight:800;color:#9ca3af;text-transform:uppercase">Name</span>' +
+        '<span style="font-size:0.7rem;font-weight:800;color:#9ca3af;text-transform:uppercase">School</span>' +
+        '<span style="font-size:0.7rem;font-weight:800;color:#9ca3af;text-transform:uppercase">Subject</span>' +
+        '<span style="font-size:0.7rem;font-weight:800;color:#9ca3af;text-transform:uppercase">Students</span>' +
+        '<span></span>' +
+      '</div>' +
+      TEACHERS.map(function(t) {
+        var statusBg = t.status === 'active' ? '#dcfce7' : '#fee2e2';
+        var statusC  = t.status === 'active' ? '#166534' : '#991b1b';
+        return '<div class="admin-teacher-row" style="display:grid;grid-template-columns:2fr 2fr 1fr 1fr 80px;padding:12px 16px;border-bottom:1px solid #f9fafb;align-items:center">' +
+          '<div>' +
+            '<div style="font-size:0.88rem;font-weight:800">' + t.name + '</div>' +
+            '<div style="font-size:0.72rem;color:#9ca3af">' + t.classes + ' classes</div>' +
+          '</div>' +
+          '<div style="font-size:0.82rem;color:#374151">' + t.school + '</div>' +
+          '<div style="font-size:0.82rem;color:#374151">' + t.subject + '</div>' +
+          '<div style="font-size:0.88rem;font-weight:700">' + t.students + '</div>' +
+          '<span style="background:' + statusBg + ';color:' + statusC + ';font-size:0.68rem;font-weight:800;padding:3px 8px;border-radius:6px;text-transform:uppercase">' + t.status + '</span>' +
+        '</div>';
+      }).join('') +
+    '</div>'
+  );
+
+  // ── ROSTER TAB ───────────────────────────────────────────────
+  var rosterTab = wrap(
+    sectionHead('Student Roster', 'All students enrolled in the district') +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px;flex-wrap:wrap">' +
+      '<input placeholder="Search students…" style="border:1.5px solid #e5e7eb;border-radius:10px;padding:8px 14px;font-size:0.84rem;font-family:inherit;outline:none;flex:1;min-width:180px">' +
+      '<div style="display:flex;gap:8px">' +
+        '<button onclick="alert(\'CSV import coming soon\')" style="background:#059669;color:white;border:none;border-radius:10px;padding:9px 18px;font-size:0.82rem;font-weight:800;cursor:pointer;font-family:inherit">↑ Import CSV</button>' +
+        '<button onclick="alert(\'Add student form coming soon\')" style="background:#0369a1;color:white;border:none;border-radius:10px;padding:9px 18px;font-size:0.82rem;font-weight:800;cursor:pointer;font-family:inherit">+ Add Student</button>' +
+      '</div>' +
+    '</div>' +
+    '<div style="background:white;border-radius:16px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,0.06)">' +
+      '<div style="display:grid;grid-template-columns:2fr 2fr 60px 2fr 80px 80px;padding:10px 16px;background:#f9fafb;border-bottom:1px solid #f3f4f6">' +
+        '<span style="font-size:0.7rem;font-weight:800;color:#9ca3af;text-transform:uppercase">Student</span>' +
+        '<span style="font-size:0.7rem;font-weight:800;color:#9ca3af;text-transform:uppercase">School</span>' +
+        '<span style="font-size:0.7rem;font-weight:800;color:#9ca3af;text-transform:uppercase">Gr.</span>' +
+        '<span style="font-size:0.7rem;font-weight:800;color:#9ca3af;text-transform:uppercase">Teacher</span>' +
+        '<span style="font-size:0.7rem;font-weight:800;color:#9ca3af;text-transform:uppercase">PM1</span>' +
+        '<span style="font-size:0.7rem;font-weight:800;color:#9ca3af;text-transform:uppercase">PM2</span>' +
+      '</div>' +
+      ROSTER.map(function(r) {
+        function scoreCell(v) {
+          if (!v) return '<span style="color:#9ca3af">—</span>';
+          var c = parseInt(v) >= 80 ? '#059669' : parseInt(v) >= 60 ? '#d97706' : '#dc2626';
+          return '<span style="font-weight:800;color:' + c + '">' + v + '%</span>';
+        }
+        return '<div style="display:grid;grid-template-columns:2fr 2fr 60px 2fr 80px 80px;padding:12px 16px;border-bottom:1px solid #f9fafb;align-items:center">' +
+          '<div><div style="font-size:0.88rem;font-weight:800">' + r.name + '</div>' +
+            '<div style="font-size:0.7rem;color:#9ca3af;font-family:monospace">' + r.sparkCode + '</div>' +
+          '</div>' +
+          '<div style="font-size:0.8rem;color:#374151">' + r.school + '</div>' +
+          '<div style="font-size:0.88rem;font-weight:700;text-align:center">' + r.grade + '</div>' +
+          '<div style="font-size:0.8rem;color:#374151">' + r.teacher + '</div>' +
+          '<div style="text-align:center;font-size:0.85rem">' + scoreCell(r.pm1) + '</div>' +
+          '<div style="text-align:center;font-size:0.85rem">' + scoreCell(r.pm2) + '</div>' +
+        '</div>';
+      }).join('') +
+    '</div>'
+  );
+
+  // ── SPARK LOOKUP TAB ─────────────────────────────────────────
+  var sparkTab = wrap(
+    sectionHead('Spark Lookup', 'Search all Spark assessment results district-wide') +
+    '<div style="background:white;border-radius:16px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,0.06);margin-bottom:20px">' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap">' +
+        '<input id="admin-spark-search" placeholder="Search by student name, school, or Spark code…" oninput="AdminPanel.filterSpark(this.value)" style="border:1.5px solid #e5e7eb;border-radius:10px;padding:9px 14px;font-size:0.84rem;font-family:inherit;outline:none;flex:1;min-width:200px">' +
+        '<select onchange="AdminPanel.filterSparkSchool(this.value)" style="border:1.5px solid #e5e7eb;border-radius:10px;padding:9px 12px;font-size:0.82rem;font-family:inherit;outline:none">' +
+          '<option value="">All Schools</option>' +
+          SCHOOLS.map(function(s){ return '<option value="' + s.name + '">' + s.name + '</option>'; }).join('') +
+        '</select>' +
+      '</div>' +
+    '</div>' +
+    '<div id="admin-spark-results" style="display:flex;flex-direction:column;gap:10px">' +
+    SPARK_RESULTS.map(function(r) {
+      var tier = r.code.split('-')[1];
+      var tierColor = tier==='A'?'#059669':tier==='B'?'#0369a1':tier==='C'?'#d97706':tier==='D'?'#dc2626':'#7f1d1d';
+      var tierBg    = tier==='A'?'#dcfce7':tier==='B'?'#dbeafe':tier==='C'?'#fef3c7':tier==='D'?'#fee2e2':'#fca5a5';
+      return '<div class="admin-spark-row" data-student="' + r.student.toLowerCase() + '" data-school="' + r.school + '" style="background:white;border-radius:14px;padding:16px 18px;box-shadow:0 1px 6px rgba(0,0,0,0.06);display:flex;align-items:center;gap:14px;flex-wrap:wrap">' +
+        '<div style="flex:1;min-width:140px">' +
+          '<div style="font-size:0.9rem;font-weight:900">' + r.student + '</div>' +
+          '<div style="font-size:0.75rem;color:#9ca3af">' + r.school + ' · Gr. ' + r.grade + ' · ' + r.teacher + '</div>' +
+        '</div>' +
+        '<div style="display:inline-flex;align-items:center;gap:0;background:#111;border-radius:10px;overflow:hidden">' +
+          '<div style="padding:8px 12px;border-right:1px solid #333;text-align:center">' +
+            '<div style="font-size:1rem;font-weight:900;color:#E8562A">' + r.grade + '</div>' +
+            '<div style="font-size:0.55rem;color:#6b7280;text-transform:uppercase">GR</div>' +
+          '</div>' +
+          '<div style="padding:8px 12px;border-right:1px solid #333;text-align:center">' +
+            '<div style="font-size:1rem;font-weight:900;color:' + tierColor + ';background:' + tierBg + ';border-radius:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;margin:0 auto">' + tier + '</div>' +
+            '<div style="font-size:0.55rem;color:#6b7280;text-transform:uppercase;margin-top:2px">TIER</div>' +
+          '</div>' +
+          '<div style="padding:8px 12px;text-align:center">' +
+            '<div style="font-size:1rem;font-weight:900;color:white">' + r.code.split('-')[2] + '<span style="font-size:0.65rem">%</span>' + '</div>' +
+            '<div style="font-size:0.55rem;color:#6b7280;text-transform:uppercase">SCORE</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;font-size:0.72rem">' +
+          '<span style="background:#fff3ef;color:#E8562A;padding:4px 8px;border-radius:6px;font-weight:700">📐 ' + r.math + '%</span>' +
+          '<span style="background:#ecfdf5;color:#059669;padding:4px 8px;border-radius:6px;font-weight:700">⚗️ ' + r.sci + '%</span>' +
+          '<span style="background:#f5f3ff;color:#7c3aed;padding:4px 8px;border-radius:6px;font-weight:700">🌎 ' + r.spa + '%</span>' +
+        '</div>' +
+        '<span style="font-size:0.72rem;color:#9ca3af;white-space:nowrap">' + r.date + '</span>' +
+      '</div>';
+    }).join('') +
+    '</div>'
+  );
+
+  // ── ASSESSMENTS TAB ──────────────────────────────────────────
+  var assessmentsTab = wrap(
+    sectionHead('PM Assessments', 'Progress Monitoring windows — PM1 (September) and PM2 (February)') +
+    '<div style="background:#fff7ed;border:1.5px solid #fed7aa;border-radius:14px;padding:14px 18px;margin-bottom:20px">' +
+      '<div style="font-size:0.72rem;font-weight:800;color:#c2410c;text-transform:uppercase;margin-bottom:6px">📋 Assessment Schedule</div>' +
+      '<p style="font-size:0.84rem;color:#7c2d12;font-weight:600;margin:0;line-height:1.5">PM1 is administered in <strong>September</strong> as the fall baseline. PM2 is administered in <strong>February</strong> as the mid-year growth check. Both use the Spark GL-TL-Score system. Results are locked after the window closes.</p>' +
+    '</div>' +
+    '<div style="display:flex;flex-direction:column;gap:12px">' +
+    ASSESSMENTS.map(function(a) {
+      var statusColor = a.status==='open'?'#059669':a.status==='scheduled'?'#0369a1':'#6B7280';
+      var statusBg    = a.status==='open'?'#dcfce7':a.status==='scheduled'?'#dbeafe':'#f3f4f6';
+      return '<div style="background:white;border-radius:16px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,0.06)">' +
+        '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px">' +
+          '<div>' +
+            '<div style="font-size:0.95rem;font-weight:900">' + a.name + '</div>' +
+            '<div style="font-size:0.78rem;color:#6B7280;margin-top:2px">📅 ' + a.period + ' · Window: ' + a.window + ' · ' + a.schools + ' schools</div>' +
+          '</div>' +
+          '<span style="background:' + statusBg + ';color:' + statusColor + ';padding:4px 12px;border-radius:999px;font-size:0.72rem;font-weight:800;text-transform:uppercase;white-space:nowrap">' + a.status + '</span>' +
+        '</div>' +
+        '<p style="font-size:0.82rem;color:#6B7280;margin:0 0 12px;line-height:1.4">' + a.notes + '</p>' +
+        (a.avgScore ? '<div style="font-size:0.82rem;font-weight:700;color:#374151">District avg: <strong>' + a.avgScore + '%</strong></div>' : '') +
+        (a.status !== 'closed' ? '<button onclick="alert(\'Assessment management coming soon\')" style="margin-top:10px;background:#E8562A;color:white;border:none;border-radius:8px;padding:7px 16px;font-size:0.78rem;font-weight:800;cursor:pointer;font-family:inherit">Manage Window →</button>' : '<span style="font-size:0.78rem;color:#9ca3af;font-weight:600">Results locked ·</span> <button onclick="alert(\'View results coming soon\')" style="background:none;border:none;font-size:0.78rem;font-weight:700;color:#0369a1;cursor:pointer;padding:0">View Results</button>') +
+      '</div>';
+    }).join('') +
+    '</div>'
+  );
+
+  // ── INVITE TAB ───────────────────────────────────────────────
+  var inviteTab = wrap(
+    sectionHead('Invite Staff & Leaders', 'Send access invitations to principals, superintendents, and admins') +
+    '<div style="background:white;border-radius:16px;padding:24px;box-shadow:0 1px 6px rgba(0,0,0,0.06);margin-bottom:20px">' +
+      '<h3 style="font-size:0.95rem;font-weight:900;margin-bottom:16px">✉️ Send Invite</h3>' +
+      '<div style="display:flex;flex-direction:column;gap:12px">' +
+        '<div>' +
+          '<label style="font-size:0.78rem;font-weight:800;color:#374151;display:block;margin-bottom:6px">Email Address</label>' +
+          '<input type="email" placeholder="principal@school.edu" style="width:100%;box-sizing:border-box;border:1.5px solid #e5e7eb;border-radius:10px;padding:9px 14px;font-size:0.84rem;font-family:inherit;outline:none">' +
+        '</div>' +
+        '<div>' +
+          '<label style="font-size:0.78rem;font-weight:800;color:#374151;display:block;margin-bottom:6px">Role</label>' +
+          '<select style="width:100%;border:1.5px solid #e5e7eb;border-radius:10px;padding:9px 12px;font-size:0.84rem;font-family:inherit;outline:none">' +
+            '<option>Principal</option>' +
+            '<option>Assistant Principal</option>' +
+            '<option>Superintendent</option>' +
+            '<option>District Administrator</option>' +
+            '<option>Curriculum Coordinator</option>' +
+            '<option>Data Analyst</option>' +
+          '</select>' +
+        '</div>' +
+        '<div>' +
+          '<label style="font-size:0.78rem;font-weight:800;color:#374151;display:block;margin-bottom:6px">School (optional)</label>' +
+          '<select style="width:100%;border:1.5px solid #e5e7eb;border-radius:10px;padding:9px 12px;font-size:0.84rem;font-family:inherit;outline:none">' +
+            '<option value="">District-wide access</option>' +
+            SCHOOLS.map(function(s){ return '<option>' + s.name + '</option>'; }).join('') +
+          '</select>' +
+        '</div>' +
+        '<button onclick="alert(\'Invite sent! (demo mode)\')" style="background:#E8562A;color:white;border:none;border-radius:10px;padding:10px 20px;font-size:0.84rem;font-weight:800;cursor:pointer;font-family:inherit">Send Invite →</button>' +
+      '</div>' +
+    '</div>' +
+    '<div style="background:white;border-radius:16px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,0.06)">' +
+      '<h3 style="font-size:0.9rem;font-weight:900;margin-bottom:12px">Pending Invites</h3>' +
+      '<div style="padding:12px 0;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between">' +
+        '<div><div style="font-size:0.85rem;font-weight:700">principal@lincoln.edu</div><div style="font-size:0.72rem;color:#9ca3af">Principal · Lincoln Middle School · sent 2 days ago</div></div>' +
+        '<span style="background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:999px;font-size:0.7rem;font-weight:800">PENDING</span>' +
+      '</div>' +
+      '<div style="padding:12px 0;display:flex;align-items:center;justify-content:space-between">' +
+        '<div><div style="font-size:0.85rem;font-weight:700">super@district.edu</div><div style="font-size:0.72rem;color:#9ca3af">Superintendent · District-wide · sent 1 week ago</div></div>' +
+        '<span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:999px;font-size:0.7rem;font-weight:800">ACCEPTED</span>' +
+      '</div>' +
+    '</div>'
+  );
+
+  // ── TAB BAR ───────────────────────────────────────────────────
+  var TABS = [
+    {id:'overview',     label:'Overview'},
+    {id:'schools',      label:'🏫 Schools'},
+    {id:'teachers',     label:'👩\u200d🏫 Teachers'},
+    {id:'roster',       label:'📋 Roster'},
+    {id:'spark',        label:'⚡ Spark'},
+    {id:'assessments',  label:'📊 PM1/PM2'},
+    {id:'invite',       label:'✉️ Invite'},
   ];
-  const tabBar = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:24px">${tabsList.map(t =>
-    `<button onclick="App.go('dashboard/admin/${t.id}')" style="padding:7px 16px;border-radius:999px;font-family:inherit;font-weight:700;font-size:0.82rem;cursor:pointer;border:1.5px solid ${t.id===tab?'var(--text)':'var(--border)'};background:${t.id===tab?'var(--text)':'transparent'};color:${t.id===tab?'white':'var(--muted)'}">${t.label}</button>`
-  ).join('')}</div>`;
-  const statusBadge = s => ({
-    open:   '<span style="background:#dcfce7;color:#15803d;padding:3px 10px;border-radius:999px;font-size:0.72rem;font-weight:800">OPEN</span>',
-    closed: '<span style="background:#f3f4f6;color:#6b7280;padding:3px 10px;border-radius:999px;font-size:0.72rem;font-weight:800">CLOSED</span>',
-    draft:  '<span style="background:#fef3c7;color:#d97706;padding:3px 10px;border-radius:999px;font-size:0.72rem;font-weight:800">DRAFT</span>',
-  })[s]||'';
+  var tabBar = '<div style="display:flex;gap:6px;overflow-x:auto;padding:0 24px;border-bottom:2px solid #f0f0f0;margin-bottom:24px;scrollbar-width:none">' +
+    TABS.map(function(t) {
+      var active = t.id === tab;
+      return '<button onclick="App.go(\'dashboard/admin/' + t.id + '\')" style="padding:10px 16px;font-size:0.82rem;font-weight:800;cursor:pointer;font-family:inherit;border:none;background:none;white-space:nowrap;border-bottom:3px solid ' + (active ? '#E8562A' : 'transparent') + ';color:' + (active ? '#E8562A' : '#6B7280') + ';transition:color 0.15s">' + t.label + '</button>';
+    }).join('') +
+  '</div>';
 
-  const overviewHtml = `
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
-      ${_statCard('\ud83d\udc65', '64', 'Total Users', '#E8562A')}
-      ${_statCard('\u25b6\ufe0f', '1,038', 'Lesson Plays', '#059669')}
-      ${_statCard('\u26a1', '248', 'Spark Runs', '#7c3aed')}
-      ${_statCard('\ud83d\udcda', String(lessons.length), 'Live Lessons', '#d97706')}
-    </div>
-    <div style="background:#f9fafb;border-radius:16px;padding:20px;margin-bottom:20px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px">
-        <h3 style="font-size:0.95rem;font-weight:900">Weekly Lesson Plays (Last 12 Weeks)</h3>
-        <span style="font-size:0.78rem;font-weight:700;color:#059669">+14% this week</span>
-      </div>
-      <div style="display:flex;align-items:flex-end;gap:4px;height:64px">${sparkline}</div>
-      <div style="display:flex;justify-content:space-between;margin-top:4px">
-        <span style="font-size:0.68rem;color:#9ca3af">12 wks ago</span>
-        <span style="font-size:0.68rem;color:#9ca3af">This week</span>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div style="background:#f9fafb;border-radius:16px;padding:18px">
-        <h3 style="font-size:0.9rem;font-weight:900;margin-bottom:12px">Users by Role</h3>
-        ${[['Student','38','#E8562A'],['Teacher','14','#059669'],['Parent','9','#0369a1'],['District','3','#7c3aed']].map(([r,n,c])=>`
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #e5e7eb">
-            <span style="font-size:0.88rem;font-weight:700">${r}</span>
-            <span style="font-weight:900;color:${c}">${n}</span>
-          </div>`).join('')}
-      </div>
-      <div style="background:#f9fafb;border-radius:16px;padding:18px">
-        <h3 style="font-size:0.9rem;font-weight:900;margin-bottom:12px">Quick Admin Actions</h3>
-        <div style="display:flex;flex-direction:column;gap:9px">
-          <button onclick="App.go('dashboard/admin/assessments')" style="background:#fff3ef;border:2px solid #E8562A;border-radius:10px;padding:10px 14px;cursor:pointer;font-family:inherit;font-weight:800;font-size:0.84rem;color:#E8562A;text-align:left">Open New Assessment</button>
-          <button onclick="App.go('dashboard/admin/pm1')" style="background:#f5f3ff;border:2px solid #7c3aed;border-radius:10px;padding:10px 14px;cursor:pointer;font-family:inherit;font-weight:800;font-size:0.84rem;color:#7c3aed;text-align:left">View PM1 Results</button>
-          <button onclick="App.go('dashboard/admin/lessons')" style="background:#ecfdf5;border:2px solid #059669;border-radius:10px;padding:10px 14px;cursor:pointer;font-family:inherit;font-weight:800;font-size:0.84rem;color:#059669;text-align:left">Manage Lessons</button>
-          <button onclick="App.go('roadmap')" style="background:#f3f4f6;border:2px solid #374151;border-radius:10px;padding:10px 14px;cursor:pointer;font-family:inherit;font-weight:800;font-size:0.84rem;color:#374151;text-align:left">🗺️ Product Roadmap</button>
-        </div>
-      </div>
-    </div>`;
+  var bodyMap = {
+    overview: overviewTab, schools: schoolsTab, teachers: teachersTab,
+    roster: rosterTab, spark: sparkTab, assessments: assessmentsTab, invite: inviteTab
+  };
+  var body = bodyMap[tab] || overviewTab;
 
-  const assessmentsHtml = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <h3 style="font-size:1rem;font-weight:900">Assessment Manager</h3>
-      <button onclick="App.go('spark/play')" style="background:#E8562A;color:white;border:none;border-radius:999px;padding:9px 18px;font-size:0.82rem;font-weight:800;cursor:pointer">Open New Spark</button>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px">
-      ${ASSESSMENTS.map(a => `
-        <div style="background:#f9fafb;border-radius:16px;padding:18px 20px">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px">
-            <div>
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px">
-                <span style="font-weight:900;font-size:0.95rem">${a.name}</span>
-                ${statusBadge(a.status)}
-              </div>
-              <div style="font-size:0.77rem;color:#9ca3af;font-weight:600">Code: <code style="background:#e5e7eb;padding:1px 6px;border-radius:5px;font-weight:800">${a.code}</code> &middot; ${a.date} &middot; ${a.classes} classes &middot; ${a.students} students${a.avgScore ? ' &middot; Avg: ' + a.avgScore + '%' : ''}</div>
-            </div>
-            <div style="display:flex;gap:8px">
-              ${a.status === 'open'   ? '<button onclick="alert(\'Assessment closed!\')" style="background:#fff3ef;color:#E8562A;border:2px solid #E8562A;border-radius:999px;padding:7px 14px;font-size:0.78rem;font-weight:800;cursor:pointer">Close</button>' : ''}
-              ${a.status === 'draft'  ? '<button onclick="alert(\'Assessment opened for testing!\')" style="background:#E8562A;color:white;border:none;border-radius:999px;padding:7px 14px;font-size:0.78rem;font-weight:800;cursor:pointer">Open for Testing</button>' : ''}
-              ${a.status === 'closed' ? '<button onclick="App.go(\'assessment\')" style="background:#f3f4f6;color:#374151;border:none;border-radius:999px;padding:7px 14px;font-size:0.78rem;font-weight:800;cursor:pointer">View Results</button>' : ''}
-            </div>
-          </div>
-        </div>`).join('')}
-    </div>
-    <div style="background:#f0f9ff;border-radius:12px;padding:16px 18px">
-      <p style="font-size:0.82rem;font-weight:700;color:#0369a1;margin-bottom:3px">How it works</p>
-      <p style="font-size:0.78rem;color:#6b7280;line-height:1.5">Create a Spark, share the class code with students, then click "Open for Testing." Students take the quiz and results appear automatically. Close the assessment to lock in the data for PM reports.</p>
-    </div>`;
-
-  const pm1Html = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div>
-        <h3 style="font-size:1rem;font-weight:900;margin-bottom:2px">PM1 Results &mdash; Progress Monitoring 1</h3>
-        <p style="font-size:0.78rem;color:#9ca3af;font-weight:600">9-week benchmark &middot; Completed Apr 14, 2026 &middot; 3 classes</p>
-      </div>
-      <button style="background:#f3f4f6;border:none;border-radius:999px;padding:8px 14px;font-size:0.78rem;font-weight:800;cursor:pointer">Export PDF</button>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
-      ${_statCard('\ud83c\udfeb', '64', 'Students Tested', '#E8562A')}
-      ${_statCard('\ud83d\udcca', '77%', 'School-Wide Avg', '#059669')}
-      ${_statCard('\u2b06\ufe0f', '28', 'Students Improved', '#0369a1')}
-      ${_statCard('\u26a0\ufe0f', '10', 'Need Intervention', '#d97706')}
-    </div>
-    <div class="ds-table-wrap" style="margin-bottom:20px">
-      <table class="ds-table">
-        <thead><tr><th>Class</th><th>Grade</th><th>Students</th><th style="color:var(--math)">Math</th><th style="color:var(--sci)">Science</th><th style="color:var(--spa)">Spanish</th><th>Trend</th><th>Needs Help</th></tr></thead>
-        <tbody>
-          ${PM1_CLASSES.map(c => `
-            <tr class="ds-row">
-              <td style="font-weight:800">${c.name}</td>
-              <td style="color:#9ca3af;font-weight:600">${c.grade}</td>
-              <td style="text-align:center;font-weight:700">${c.students}</td>
-              <td style="text-align:center;font-weight:900;color:var(--math)">${c.mathAvg}%</td>
-              <td style="text-align:center;font-weight:900;color:var(--sci)">${c.sciAvg}%</td>
-              <td style="text-align:center;font-weight:900;color:var(--spa)">${c.spaAvg}%</td>
-              <td style="text-align:center">${c.improvement > 0
-                ? '<span style="color:#059669;font-weight:800;font-size:0.85rem">up +' + c.improvement + '%</span>'
-                : '<span style="color:#dc2626;font-weight:800;font-size:0.85rem">down ' + c.improvement + '%</span>'}</td>
-              <td style="text-align:center"><span style="background:${c.needs>3?'#fee2e2':'#fef3c7'};color:${c.needs>3?'#dc2626':'#d97706'};padding:3px 10px;border-radius:999px;font-size:0.75rem;font-weight:800">${c.needs} students</span></td>
-            </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
-      ${[['Math','var(--math)','#f0f7ff',77,'+4%','Ratios','Long Division'],
-         ['Science','var(--sci)','#f0fdf4',78,'+2%','Ecosystems','Cell Biology'],
-         ['Spanish','var(--spa)','#fffbeb',77,'+6%','Greetings','Verb Conjugation']].map(([subj,c,bg,avg,trend,top,low])=>`
-        <div style="background:${bg};border-radius:16px;padding:16px">
-          <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:${c};margin-bottom:6px">${subj}</div>
-          <div style="font-size:1.8rem;font-weight:900;color:${c};line-height:1">${avg}%</div>
-          <div style="font-size:0.72rem;color:#059669;font-weight:700;margin-bottom:8px">${trend} vs PM0</div>
-          <div style="font-size:0.74rem;color:#374151;font-weight:700">Top: <span style="color:#6b7280;font-weight:500">${top}</span></div>
-          <div style="font-size:0.74rem;color:#374151;font-weight:700;margin-top:3px">Work on: <span style="color:#6b7280;font-weight:500">${low}</span></div>
-        </div>`).join('')}
-    </div>
-    <div style="background:#f9fafb;border-radius:16px;padding:18px">
-      <h3 style="font-size:0.9rem;font-weight:900;margin-bottom:10px">Intervention Candidates (10 students below 60%)</h3>
-      ${['Noah Williams (P3) -- Math 58%, needs ratio support',
-         'Mason Rodriguez (P3) -- Science 64%, needs cell bio review',
-         'Ethan Brown (P5) -- Overall 55%, multi-subject support needed',
-         'Aiden Scott (P5) -- Math 58%, fractions and decimals',
-         'Dylan Hayes (P7) -- Overall 48%, at risk -- escalate to counselor'].map(s=>`
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #e5e7eb">
-          <span style="color:#dc2626;font-size:0.9rem">!</span>
-          <span style="font-size:0.84rem;font-weight:600;color:#374151">${s}</span>
-        </div>`).join('')}
-    </div>`;
-
-  const lessonsHtml = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <h3 style="font-size:1rem;font-weight:900">Lesson Library (${lessons.length} lessons)</h3>
-    </div>
-    <div class="ds-table-wrap">
-      <table class="ds-table">
-        <thead><tr><th>#</th><th>Subj</th><th>Title</th><th>Plays</th><th>Rating</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>
-          ${[...lessons].sort((a,b)=>b.plays-a.plays).map((l,i)=>`
-            <tr class="ds-row">
-              <td style="color:#9ca3af;font-weight:700">${i+1}</td>
-              <td><span style="background:${sBg(l.subj)};color:${sColor(l.subj)};padding:3px 7px;border-radius:6px;font-size:0.72rem;font-weight:800">${l.subj}</span></td>
-              <td style="font-weight:700">${l.title}</td>
-              <td style="font-weight:800;text-align:center">${l.plays}</td>
-              <td style="font-weight:800;text-align:center;color:${l.rating>=90?'#059669':l.rating>=75?'#d97706':'#dc2626'}">${l.rating}%</td>
-              <td><span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:999px;font-size:0.7rem;font-weight:800">Live</span></td>
-              <td><button onclick="App.go('lesson/${l.id}')" style="background:#f3f4f6;border:none;border-radius:8px;padding:4px 10px;font-size:0.75rem;font-weight:700;cursor:pointer">Preview</button></td>
-            </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>`;
-
-  const systemHtml = `
-    <h3 style="font-size:0.95rem;font-weight:900;margin-bottom:14px">System Status</h3>
-    ${[
-      {label:'Cloudflare Pages CDN',              ok:true},
-      {label:'Service Worker / Offline Mode',     ok:true},
-      {label:'LocalStorage (student progress)',   ok:true},
-      {label:'PWA Manifest & Icons',              ok:true},
-      {label:'Signup / Auth (localStorage)',      ok:true},
-      {label:'Supabase backend',                  ok:false, note:'Not connected yet'},
-      {label:'Email notifications',               ok:false, note:'Coming soon'},
-    ].map(s=>`
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #e5e7eb">
-        <span style="font-size:0.88rem;font-weight:600">${s.label}</span>
-        <span style="font-size:0.78rem;font-weight:800;color:${s.ok?'#059669':'#d97706'};background:${s.ok?'#ecfdf5':'#fef3c7'};padding:3px 10px;border-radius:999px">${s.ok?'Online':s.note||'Pending'}</span>
-      </div>`).join('')}`;
-
-  const bodyMap = {overview:overviewHtml, assessments:assessmentsHtml, pm1:pm1Html, lessons:lessonsHtml, system:systemHtml};
-
-  return `
-    ${_dashNav('admin','Admin','\u2699\ufe0f')}
-    <div style="max-width:960px;margin:0 auto;padding:36px 20px 80px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
-        <div>
-          <h1 style="font-size:2rem;font-weight:900;letter-spacing:-1px;margin-bottom:4px">Admin Dashboard</h1>
-          <p style="color:#6b7280;font-size:0.9rem;font-weight:500">Learn.edu platform &middot; Spring 2026 &middot; <span style="color:#E8562A;font-weight:700">Demo data</span></p>
-        </div>
-        <button onclick="App.go('dashboard/admin/assessments')" style="background:#E8562A;color:white;border:none;border-radius:999px;padding:10px 20px;font-size:0.85rem;font-weight:800;cursor:pointer">Open Assessment for Testing</button>
-      </div>
-      ${tabBar}
-      <div style="background:white;border-radius:20px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,0.06)">
-        ${bodyMap[tab] || overviewHtml}
-      </div>
-    </div>`;
+  return _dashNav('admin', 'Admin', '⚙️') +
+    '<div style="max-width:900px;margin:0 auto;padding:24px 0 60px">' +
+      '<div style="padding:0 24px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">' +
+        '<div>' +
+          '<h1 style="font-size:1.4rem;font-weight:900;margin-bottom:4px">District Admin Panel</h1>' +
+          '<p style="font-size:0.82rem;color:#6B7280;margin:0">Manage your district — schools, staff, students, and assessments.</p>' +
+        '</div>' +
+        '<span style="background:#E8562A18;color:#E8562A;padding:5px 14px;border-radius:999px;font-size:0.78rem;font-weight:800">⚙️ Admin Access</span>' +
+      '</div>' +
+      tabBar +
+      '<div style="padding:0 24px">' + body + '</div>' +
+    '</div>';
 };
 
 // ── Parent Dashboard ──────────────────────────────────────────
@@ -3524,4 +4278,180 @@ Views.dashboardParent = function() {
         <p style="font-size:0.9rem;color:#374151;font-weight:500;line-height:1.5;margin:0">Try doing one lesson together — watch your child explain the concept back to you. Teaching something is the best way to learn it.</p>
       </div>
     </div>`;
+};
+
+// ============================================================
+//  XP Rewards Page
+// ============================================================
+Views.rewards = function() {
+  const s     = XP.getState();
+  const lvl   = XP.level(s.total);
+  const next  = XP.nextReward();
+  const nextXp = next ? next.xpRequired - s.total : 0;
+  const progress = App.getProgress();
+  const completedCount = Object.values(progress).filter(v => v.completed).length;
+
+  const typeLabel = { theme:'🎨 Theme', game:'🎮 Game', badge:'🏅 Badge', prize:'🎁 Prize' };
+
+  const cards = XP.REWARDS.map(r => {
+    const unlocked = s.unlockedIds.includes(r.id);
+    const isTheme  = r.type === 'theme';
+    const isActive = isTheme && s.activeTheme === (r.cssClass || '');
+    const xpLeft   = r.xpRequired - s.total;
+
+    let action = '';
+    if (unlocked) {
+      if (isTheme) {
+        action = isActive
+          ? `<button class="btn btn-ghost" style="font-size:0.78rem;padding:5px 14px;opacity:0.5" disabled>Active ✓</button>`
+          : `<button class="btn btn-primary" style="font-size:0.78rem;padding:5px 14px" onclick="XP.setTheme('${r.cssClass||''}');App.route()">Apply</button>`;
+      } else if (r.type === 'game') {
+        action = `<button class="btn btn-primary" style="font-size:0.78rem;padding:5px 14px" onclick="App.go('${r.route}')">Play →</button>`;
+      } else if (r.type === 'prize' && r.id === 'prize-mystery') {
+        action = `<button class="btn btn-primary" style="font-size:0.78rem;padding:5px 14px" onclick="Views._mysteryPrize()">Open 🎁</button>`;
+      }
+    } else {
+      action = `<div style="font-size:0.72rem;color:var(--muted);font-weight:700">${xpLeft > 0 ? `+${xpLeft} XP to unlock` : 'Almost there!'}</div>`;
+    }
+
+    return `
+      <div class="reward-card ${unlocked ? 'reward-unlocked' : 'reward-locked'}">
+        <div class="reward-icon">${r.icon}</div>
+        <div class="reward-label">${typeLabel[r.type] || r.type}</div>
+        <div class="reward-name">${r.name}</div>
+        <div class="reward-desc">${r.desc}</div>
+        ${!unlocked ? `<div class="reward-xp-req">⚡ ${r.xpRequired} XP</div>` : ''}
+        <div style="margin-top:auto;padding-top:12px">${action}</div>
+      </div>`;
+  }).join('');
+
+  // Progress bar to next reward
+  const barPct = next
+    ? Math.round(Math.max(0, Math.min(100, ((s.total - (next.xpRequired - (next.xpRequired - (XP.REWARDS[XP.REWARDS.indexOf(next)-1]?.xpRequired || 0)))) / (next.xpRequired - (XP.REWARDS[XX = XP.REWARDS.indexOf(next), XX > 0 ? XX - 1 : 0]?.xpRequired || 0))) * 100)))
+    : 100;
+  const prevThreshold = next ? (XP.REWARDS[XP.REWARDS.indexOf(next) - 1]?.xpRequired || 0) : 0;
+  const barFill = next
+    ? Math.round(((s.total - prevThreshold) / (next.xpRequired - prevThreshold)) * 100)
+    : 100;
+
+  return `
+    <div style="max-width:900px;margin:0 auto;padding:0 20px 60px">
+      ${Views.nav()}
+
+      <!-- Hero -->
+      <div style="background:linear-gradient(135deg,${lvl.color},${lvl.color}cc);border-radius:24px;padding:32px;margin:24px 0;color:white;display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+        <div style="font-size:3rem;flex-shrink:0">⚡</div>
+        <div style="flex:1;min-width:180px">
+          <div style="font-size:0.78rem;font-weight:800;opacity:0.8;letter-spacing:.08em;text-transform:uppercase">Level ${lvl.num} · ${lvl.name}</div>
+          <div style="font-size:2.8rem;font-weight:900;line-height:1">${s.total.toLocaleString()} <span style="font-size:1.2rem;opacity:0.85">XP</span></div>
+          <div style="font-size:0.85rem;opacity:0.85;margin-top:4px">🔥 ${s.streak}-day streak · 📚 ${completedCount} lessons done</div>
+          ${next ? `
+          <div style="margin-top:14px">
+            <div style="font-size:0.75rem;opacity:0.85;margin-bottom:6px">Next unlock: ${next.icon} ${next.name} (+${nextXp} XP)</div>
+            <div style="background:rgba(255,255,255,0.25);border-radius:999px;height:8px;overflow:hidden">
+              <div style="background:white;height:8px;border-radius:999px;width:${barFill}%;transition:width 0.5s"></div>
+            </div>
+          </div>` : '<div style="font-size:0.85rem;opacity:0.85;margin-top:8px">🎉 All rewards unlocked!</div>'}
+        </div>
+      </div>
+
+      <!-- Filter tabs (optional) -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
+        ${['All','🎨 Themes','🎮 Games','🏅 Badges','🎁 Prizes'].map((t,i) =>
+          `<button onclick="Views._filterRewards(this,'${t}')" class="filter-tab ${i===0?'active':''}" data-filter="${t}">${t}</button>`
+        ).join('')}
+      </div>
+
+      <!-- Reward grid -->
+      <div id="rewards-grid" class="rewards-grid">${cards}</div>
+    </div>`;
+};
+
+Views._filterRewards = function(btn, filter) {
+  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.reward-card').forEach(card => {
+    if (filter === 'All') { card.style.display = ''; return; }
+    const label = card.querySelector('.reward-label')?.textContent || '';
+    card.style.display = label.includes(filter.replace(/[🎨🎮🏅🎁] /, '').trim()) ? '' : 'none';
+  });
+};
+
+Views._mysteryPrize = function() {
+  const prizes = ['🦄 You are a unicorn coder!', '🚀 Future tech founder right here!', '🧠 Big brain energy!', '💎 Diamond-tier learner!', '🎸 Rocking it!'];
+  const msg = prizes[Math.floor(Math.random() * prizes.length)];
+  const el = document.getElementById('app');
+  if (!el) return;
+  el.insertAdjacentHTML('beforeend', `
+    <div id="mystery-overlay" onclick="this.remove()" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center">
+      <div class="score-card pop" style="max-width:380px;text-align:center;padding:40px">
+        <div style="font-size:4rem">🎁</div>
+        <h2 style="font-size:1.4rem">Your Mystery Prize</h2>
+        <p style="font-size:1.1rem;font-weight:700;color:#E8562A">${msg}</p>
+        <p style="color:var(--muted);font-size:0.85rem">Keep earning XP for more surprises…</p>
+        <button class="btn btn-primary" onclick="document.getElementById('mystery-overlay').remove()">Awesome! 🎉</button>
+      </div>
+    </div>`);
+};
+
+// ============================================================
+//  Game Shell View
+// ============================================================
+Views.game = function(gameId) {
+  const games = {
+    mathblast: { name: 'Math Blast', icon: '💥', desc: '15 questions · 60 seconds', color: '#E8562A', locked: !XP.isUnlocked('game-mathblast') },
+    wordrush:  { name: 'Word Rush',  icon: '📝', desc: '15 words  · 60 seconds',   color: '#7c3aed', locked: !XP.isUnlocked('game-wordrush') },
+  };
+  const g = games[gameId] || games.mathblast;
+
+  if (g.locked) {
+    return `
+      <div style="max-width:600px;margin:0 auto;padding:0 20px">
+        ${Views.nav({ hash: 'rewards', label: '← Rewards' })}
+        <div style="text-align:center;padding:80px 20px">
+          <div style="font-size:4rem">🔒</div>
+          <h2>This game is locked</h2>
+          <p style="color:var(--muted)">Keep earning XP to unlock it!</p>
+          <button class="btn btn-primary" onclick="App.go('rewards')">View Rewards</button>
+        </div>
+      </div>`;
+  }
+
+  return `
+    <div style="max-width:600px;margin:0 auto;padding:0 20px 60px">
+      ${Views.nav({ hash: 'rewards', label: '← Rewards' })}
+      <div style="text-align:center;padding:24px 0 16px">
+        <div style="font-size:2.5rem">${g.icon}</div>
+        <h1 style="font-size:1.8rem;font-weight:900;margin:8px 0 4px">${g.name}</h1>
+        <p style="color:var(--muted);font-size:0.88rem">${g.desc}</p>
+      </div>
+      <div id="mb-arena" style="background:var(--card);border-radius:24px;padding:28px;box-shadow:var(--shadow)">
+        <!-- game renders here -->
+      </div>
+    </div>`;
+};
+
+
+// ── Admin Panel helpers ──────────────────────────────────────
+window.AdminPanel = {
+  filterTeachers(query) {
+    const q = (query || '').toLowerCase();
+    document.querySelectorAll('.admin-teacher-row').forEach(row => {
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  },
+  showAddTeacher() {
+    alert('Add Teacher form coming soon! Fields: Name, Email, School, Subject, Classes.');
+  },
+  filterSpark(query) {
+    const q = (query || '').toLowerCase();
+    document.querySelectorAll('.admin-spark-row').forEach(row => {
+      row.style.display = (row.dataset.student.includes(q) || row.textContent.toLowerCase().includes(q)) ? '' : 'none';
+    });
+  },
+  filterSparkSchool(school) {
+    document.querySelectorAll('.admin-spark-row').forEach(row => {
+      row.style.display = (!school || row.dataset.school === school) ? '' : 'none';
+    });
+  },
 };
