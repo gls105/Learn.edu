@@ -80,9 +80,9 @@ const App = {
       const role = parts[1] || '';
       const subtab = parts[2] || 'overview';
       if      (role === 'student') app.innerHTML = Views.dashboardStudent();
-      else if (role === 'teacher') app.innerHTML = Views.dashboardTeacher(parts[2] || 'overview');
+      else if (role === 'teacher') { app.classList.add('admin-full'); app.innerHTML = Views.dashboardTeacher(parts[2] || 'overview'); }
       else if (role === 'admin')   { app.classList.add('admin-full'); app.innerHTML = Views.dashboardAdmin(subtab); }
-      else if (role === 'parent')  app.innerHTML = Views.dashboardParent();
+      else if (role === 'parent')  { app.classList.add('admin-full'); app.innerHTML = Views.dashboardParent(); }
       else                         app.innerHTML = Views.dashboardPicker();
 
     } else if (view === 'signup') {
@@ -532,6 +532,47 @@ const DevPanel = {
     setTimeout(() => App.go('home'), 200);
   },
 };
+
+// ── Modal Helper ────────────────────────────────────────────
+const Modal = {
+  show(titleText, bodyHtml, actions = []) {
+    document.getElementById('__modal')?.remove();
+    const m = document.createElement('div');
+    m.id = '__modal';
+    const btns = actions.map(a =>
+      `<button onclick="${a.fn}" style="background:${a.color||'#E8562A'};color:white;border:none;border-radius:10px;padding:10px 22px;font-weight:800;font-size:0.88rem;cursor:pointer;font-family:inherit">${a.label}</button>`
+    ).join('');
+    m.innerHTML = `
+      <div onclick="Modal.close()" style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9990"></div>
+      <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:20px;padding:28px;max-width:480px;width:92vw;z-index:9991;box-shadow:0 20px 60px rgba(0,0,0,0.25);max-height:85vh;overflow-y:auto">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+          <div style="font-size:1.05rem;font-weight:900">${titleText}</div>
+          <button onclick="Modal.close()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#9ca3af;padding:4px 8px">✕</button>
+        </div>
+        ${bodyHtml}
+        ${btns ? `<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;flex-wrap:wrap">
+          <button onclick="Modal.close()" style="background:#f3f4f6;color:#374151;border:none;border-radius:10px;padding:10px 18px;font-weight:700;font-size:0.88rem;cursor:pointer;font-family:inherit">Cancel</button>
+          ${btns}
+        </div>` : ''}
+      </div>`;
+    document.body.appendChild(m);
+  },
+  close() { document.getElementById('__modal')?.remove(); },
+  field(label, type = 'text', placeholder = '', extra = '') {
+    return `<div style="margin-bottom:14px"><label style="display:block;font-size:0.78rem;font-weight:800;color:#374151;margin-bottom:5px">${label}</label><input type="${type}" placeholder="${placeholder}" ${extra} style="width:100%;border:1.5px solid #e5e7eb;border-radius:10px;padding:10px 13px;font-size:0.88rem;font-family:inherit;outline:none;box-sizing:border-box"></div>`;
+  },
+  select(label, options) {
+    return `<div style="margin-bottom:14px"><label style="display:block;font-size:0.78rem;font-weight:800;color:#374151;margin-bottom:5px">${label}</label><select style="width:100%;border:1.5px solid #e5e7eb;border-radius:10px;padding:10px 13px;font-size:0.88rem;font-family:inherit;outline:none;background:white;box-sizing:border-box">${options.map(o=>`<option>${o}</option>`).join('')}</select></div>`;
+  },
+  toast(msg, color = '#059669') {
+    const t = document.createElement('div');
+    t.style.cssText = `position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:${color};color:white;padding:11px 22px;border-radius:12px;font-weight:800;font-size:0.88rem;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.2);transition:opacity 0.4s`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 2200);
+  },
+};
+window.Modal = Modal;
 
 // ── Boot ─────────────────────────────────────────────────────
 window.addEventListener('hashchange', () => App.route());

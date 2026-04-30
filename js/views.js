@@ -2456,7 +2456,97 @@ Views.studyTool = function(toolId, subject, levelOrGrade) {
       </div>
     </div>`;
   } else if (toolId === 'quiz' || toolId === 'practice' || toolId === 'testprep') {
-    html = `<div style="padding:40px;text-align:center;color:#999">Quiz, Practice, and Test Prep modes are coming soon!</div>`;
+    // Gather questions from the current subject's lessons
+    const allLessonsForSubj = (subject === 'math'    ? (typeof MATH_LESSONS    !== 'undefined' ? MATH_LESSONS    : []) :
+                               subject === 'science' ? (typeof SCIENCE_LESSONS !== 'undefined' ? SCIENCE_LESSONS : []) :
+                               subject === 'spanish' ? (typeof SPANISH_LESSONS !== 'undefined' ? SPANISH_LESSONS : []) :
+                               subject === 'ela'     ? (typeof ELA_LESSONS     !== 'undefined' ? ELA_LESSONS     : []) :
+                                                       (typeof HISTORY_LESSONS !== 'undefined' ? HISTORY_LESSONS : []));
+    const quizQs = allLessonsForSubj.flatMap(l => (l.quiz || []).map(q => ({...q, lessonTitle:l.title || l.id})));
+    const practiceQs = allLessonsForSubj.flatMap(l => (l.practice || []).map(q => ({...q, lessonTitle:l.title || l.id})));
+    const pool = (toolId === 'quiz' ? quizQs : practiceQs.concat(quizQs)).filter(q => q && q.q);
+    const shuffled = pool.slice().sort(() => Math.random() - 0.5).slice(0, Math.min(10, pool.length));
+    if (!shuffled.length) {
+      html = `<div style="padding:40px;text-align:center"><div style="font-size:2rem;margin-bottom:12px">📚</div><p style="color:#6b7280">No questions available yet for this subject. Complete some lessons first!</p></div>`;
+    } else {
+      const modeLabel = toolId === 'quiz' ? 'Quiz' : toolId === 'practice' ? 'Practice' : 'Test Prep';
+      const modeColor = toolId === 'quiz' ? '#E8562A' : toolId === 'practice' ? '#059669' : '#7c3aed';
+      const subjLabel = subject.charAt(0).toUpperCase() + subject.slice(1);
+      html += this.nav({hash:'study/' + subject, label:'← Back'});
+      html += `
+        <div id="pq-root" style="max-width:560px;margin:0 auto;padding:24px 20px 60px">
+          <div style="text-align:center;margin-bottom:24px">
+            <div style="font-size:0.72rem;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em">${subjLabel} ${modeLabel}</div>
+            <h2 style="font-size:1.4rem;font-weight:900;margin-top:4px">${shuffled.length} Questions</h2>
+          </div>
+          <div id="pq-card" style="background:white;border-radius:20px;padding:28px;box-shadow:0 4px 20px rgba(0,0,0,0.08);margin-bottom:16px"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div id="pq-status" style="font-size:0.82rem;color:#9ca3af;font-weight:700">Question 1 of ${shuffled.length}</div>
+            <div id="pq-score-bar" style="font-size:0.82rem;font-weight:800;color:${modeColor}">0 correct</div>
+          </div>
+          <div id="pq-btn-row" style="display:flex;gap:10px;justify-content:center"></div>
+        </div>
+      `;
+      // Inline quiz engine
+      html += `<script>
+        (function() {
+          var _qs = ${JSON.stringify(shuffled)};
+          var _idx = 0, _correct = 0, _answered = false;
+          function render() {
+            if (_idx >= _qs.length) { showResults(); return; }
+            var q = _qs[_idx];
+            var card = document.getElementById('pq-card');
+            var status = document.getElementById('pq-status');
+            var btnRow = document.getElementById('pq-btn-row');
+            var scoreBar = document.getElementById('pq-score-bar');
+            _answered = false;
+            status.textContent = 'Question ' + (_idx+1) + ' of ' + _qs.length;
+            scoreBar.textContent = _correct + ' correct';
+            var lessonTag = q.lessonTitle ? '<div style="font-size:0.7rem;color:#9ca3af;font-weight:700;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.04em">' + q.lessonTitle + '</div>' : '';
+            if (q.type === 'multiple' && q.choices) {
+              card.innerHTML = lessonTag + '<p style="font-size:1rem;font-weight:800;line-height:1.5;margin-bottom:20px">' + q.q + '</p>' +
+                '<div style="display:flex;flex-direction:column;gap:10px">' +
+                q.choices.map(function(c) {
+                  return '<button id="choice-'+c.replace(/[^a-z0-9]/gi,'_')+'" onclick="checkAnswer(this,\'' + c.replace(/'/g,"\\'") + '\',\'' + String(q.answer).replace(/'/g,"\\'") + '\')" style="background:#f9fafb;border:2px solid #e5e7eb;border-radius:12px;padding:12px 16px;font-size:0.92rem;font-weight:700;cursor:pointer;font-family:inherit;text-align:left;transition:all 0.15s">' + c + '</button>';
+                }).join('') + '</div>';
+              btnRow.innerHTML = '';
+            } else {
+              card.innerHTML = lessonTag + '<p style="font-size:1rem;font-weight:800;line-height:1.5;margin-bottom:16px">' + q.q + '</p>' +
+                '<input id="pq-fill" placeholder="Your answer..." style="width:100%;border:2px solid #e5e7eb;border-radius:12px;padding:12px 14px;font-size:1rem;font-family:inherit;outline:none;box-sizing:border-box" onkeydown="if(event.key===\'Enter\')submitFill()">';
+              btnRow.innerHTML = '<button onclick="submitFill()" style="background:${modeColor};color:white;border:none;border-radius:12px;padding:12px 28px;font-weight:800;font-size:0.92rem;cursor:pointer;font-family:inherit">Check ✓</button>';
+            }
+          }
+          window.checkAnswer = function(btn, chosen, correct) {
+            if (_answered) return; _answered = true;
+            var right = chosen.trim().toLowerCase() === correct.trim().toLowerCase();
+            if (right) { _correct++; btn.style.background='#dcfce7'; btn.style.borderColor='#059669'; btn.style.color='#166534'; }
+            else { btn.style.background='#fee2e2'; btn.style.borderColor='#dc2626'; btn.style.color='#991b1b';
+              document.querySelectorAll('#pq-card button').forEach(function(b) { if (b.textContent.trim().toLowerCase()===correct.trim().toLowerCase()) { b.style.background='#dcfce7'; b.style.borderColor='#059669'; b.style.color='#166534'; } }); }
+            document.getElementById('pq-btn-row').innerHTML = '<button onclick="nextQ()" style="background:${modeColor};color:white;border:none;border-radius:12px;padding:12px 28px;font-weight:800;font-size:0.92rem;cursor:pointer;font-family:inherit">' + (_idx+1<_qs.length?'Next →':'See Results') + '</button>';
+          };
+          window.submitFill = function() {
+            if (_answered) return; _answered = true;
+            var inp = document.getElementById('pq-fill');
+            var val = (inp ? inp.value : '').trim();
+            var q = _qs[_idx];
+            var right = val.toLowerCase() === String(q.answer).toLowerCase();
+            if (right) { _correct++; inp.style.borderColor='#059669'; inp.style.background='#dcfce7'; }
+            else { inp.style.borderColor='#dc2626'; inp.style.background='#fee2e2';
+              var hint = document.createElement('div'); hint.style.cssText='color:#dc2626;font-size:0.82rem;font-weight:700;margin-top:8px'; hint.textContent='Correct answer: ' + q.answer; inp.parentNode.appendChild(hint); }
+            document.getElementById('pq-btn-row').innerHTML = '<button onclick="nextQ()" style="background:${modeColor};color:white;border:none;border-radius:12px;padding:12px 28px;font-weight:800;font-size:0.92rem;cursor:pointer;font-family:inherit">' + (_idx+1<_qs.length?'Next →':'See Results') + '</button>';
+          };
+          window.nextQ = function() { _idx++; render(); };
+          function showResults() {
+            var pct = Math.round(_correct/_qs.length*100);
+            var lvlIcon = pct>=90?'🏆':pct>=80?'🚀':pct>=65?'🎯':pct>=50?'🔭':'🌱';
+            var lvlLabel = pct>=90?'Champion':pct>=80?'Trailblazer':pct>=65?'Achiever':pct>=50?'Explorer':'Seedling';
+            var lvlColor = pct>=90?'#7c3aed':pct>=80?'#E8562A':pct>=65?'#059669':pct>=50?'#0369a1':'#d97706';
+            document.getElementById('pq-root').innerHTML = '<div style="text-align:center;padding:20px 0"><div style="font-size:3rem;margin-bottom:8px">' + lvlIcon + '</div><div style="font-size:2.5rem;font-weight:900;color:' + lvlColor + ';letter-spacing:-1px">' + pct + '%</div><div style="font-size:1.1rem;font-weight:800;color:' + lvlColor + ';margin-top:4px">' + lvlLabel + '</div><div style="font-size:0.88rem;color:#6b7280;margin:10px 0 24px">' + _correct + ' of ' + _qs.length + ' correct</div><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button onclick="App.go(\'home\')" style="background:#f3f4f6;color:#374151;border:none;border-radius:12px;padding:12px 20px;font-weight:800;cursor:pointer;font-family:inherit">← Home</button><button onclick="location.reload()" style="background:${modeColor};color:white;border:none;border-radius:12px;padding:12px 20px;font-weight:800;cursor:pointer;font-family:inherit">🔄 Try Again</button></div></div>';
+          }
+          render();
+        })();
+      <\/script>`;
+    }
   } else if (toolId === 'realworld') {
     const rwCards = REAL_WORLD.filter(rw => rw.subject === subject);
     if (!rwCards.length) {
@@ -3604,7 +3694,7 @@ Views.dashboardTeacher = function(tab) {
 
   // Top bar
   const topBar = `
-    <div style="background:white;border-bottom:2px solid #e5e7eb">
+    <div style="background:white;border-bottom:2px solid #e5e7eb;position:sticky;top:0;z-index:100">
       <div style="max-width:1280px;margin:0 auto;padding:0 28px">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0 10px">
           <div>
@@ -3718,7 +3808,7 @@ Views.dashboardTeacher = function(tab) {
   const classesTab = wrap(`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <h2 style="font-size:1.1rem;font-weight:900">My Classes</h2>
-      <button onclick="alert('Add Period — coming soon!')" style="background:#E8562A;color:white;border:none;border-radius:9px;padding:8px 16px;font-weight:800;font-size:0.82rem;cursor:pointer;font-family:inherit">+ New Period</button>
+      <button onclick="Modal.show('Add New Period', Modal.field('Period Name','text','e.g. Period 2 or Block B') + Modal.field('Grade Level','text','e.g. Grade 7') + Modal.field('Class Code','text','Auto-generated if blank') + Modal.select('Color',['Orange 🔴','Green 🟢','Purple 🔵','Blue 🔵']), [{label:'Create Period', fn:\"Modal.toast('Period created!');Modal.close()\", color:'#E8562A'}])" style="background:#E8562A;color:white;border:none;border-radius:9px;padding:8px 16px;font-weight:800;font-size:0.82rem;cursor:pointer;font-family:inherit">+ New Period</button>
     </div>
     ${PERIODS.map(p=>{
       const avg=Math.round(p.students.reduce((s,st)=>s+st.score,0)/p.students.length);
@@ -3739,7 +3829,7 @@ Views.dashboardTeacher = function(tab) {
           </table>
         </div>
         <div style="padding:8px 12px;display:flex;gap:7px;border-top:1px solid #f3f4f6">
-          <button onclick="alert('Manual add — coming soon!')" style="background:#f3f4f6;border:none;border-radius:7px;padding:5px 10px;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:inherit">+ Add Student</button>
+          <button onclick="Modal.show('Add Student', Modal.field('Student Name','text','Full name') + Modal.field('Email','email','student@school.edu') + Modal.select('Grade',['Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9']), [{label:'Add Student', fn:\"Modal.toast('Student added!');Modal.close()\", color:'#059669'}])" style="background:#f3f4f6;border:none;border-radius:7px;padding:5px 10px;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:inherit">+ Add Student</button>
           <label style="cursor:pointer"><span style="background:#f3f4f6;border-radius:7px;padding:5px 10px;font-size:0.72rem;font-weight:700;display:inline-block">📊 CSV Import</span><input type="file" accept=".csv" style="display:none" onchange="App.importCSV(this,'${p.id}')"></label>
           <button onclick="App.go('assign')" style="background:#E8562A18;color:#E8562A;border:1.5px solid #E8562A;border-radius:7px;padding:5px 10px;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:inherit">📋 Assign Lesson</button>
         </div>
@@ -3783,7 +3873,7 @@ Views.dashboardTeacher = function(tab) {
           <div style="font-size:1.2rem;font-weight:900;color:${isS?'#dc2626':'#d97706'}">${s.score}%</div>
           <div style="font-size:0.62rem;color:#9ca3af">Score</div>
         </div>
-        <button onclick="alert('Message feature coming soon!')" style="background:${isS?'#dc2626':'#d97706'};color:white;border:none;border-radius:8px;padding:6px 12px;font-size:0.73rem;font-weight:800;cursor:pointer;font-family:inherit">Message</button>
+        <button onclick="Modal.show('Send Message', '<p style=&quot;font-size:0.82rem;color:#6b7280;margin:0 0 14px&quot;>Send a note to this student and their parent.</p>' + Modal.select('Recipient',['Student only','Parent only','Student & Parent']) + '<div style=&quot;margin-bottom:14px&quot;><label style=&quot;display:block;font-size:0.78rem;font-weight:800;color:#374151;margin-bottom:5px&quot;>Message</label><textarea placeholder=&quot;Type your message...&quot; style=&quot;width:100%;border:1.5px solid #e5e7eb;border-radius:10px;padding:10px 13px;font-size:0.88rem;font-family:inherit;outline:none;box-sizing:border-box;height:90px;resize:none&quot;></textarea></div>', [{label:'Send Message ✉️', fn:\"Modal.toast('Message sent!');Modal.close()\", color:'${isS?'#dc2626':'#d97706'}'}])" style="background:${isS?'#dc2626':'#d97706'};color:white;border:none;border-radius:8px;padding:6px 12px;font-size:0.73rem;font-weight:800;cursor:pointer;font-family:inherit">Message</button>
       </div>`;
     }).join('')}`);
 
@@ -4128,102 +4218,228 @@ Views.dashboardAdmin = function(tab) {
 // ── Parent Dashboard ──────────────────────────────────────────
 Views.dashboardParent = function() {
   const progress = (() => { try { return JSON.parse(localStorage.getItem('learnedu-progress') || '{}'); } catch { return {}; } })();
-  const allLessons = [
-    {id:'math-4-multiplication', title:'Multiplication', subj:'math', grade:4, code:'4-MU-1A'},
-    {id:'math-4-long-division',  title:'Long Division',  subj:'math', grade:4, code:'4-LD-1A'},
-    {id:'math-5-fractions',      title:'Fractions',      subj:'math', grade:5, code:'5-FR-1A'},
-    {id:'math-5-decimals',       title:'Decimals',       subj:'math', grade:5, code:'5-DE-1A'},
-    {id:'math-6-ratios',         title:'Ratios',         subj:'math', grade:6, code:'6-RA-1A'},
-    {id:'science-4-ecosystems',  title:'Ecosystems',     subj:'science', grade:4, code:'4-EC-1A'},
-    {id:'science-5-cells',       title:'Cell Biology',   subj:'science', grade:5, code:'5-CE-1A'},
-    {id:'spanish-4-greetings',   title:'Greetings',      subj:'spanish', grade:4, code:'4-GR-1A'},
-    {id:'spanish-4-numbers',     title:'Numbers 1–20',   subj:'spanish', grade:4, code:'4-NU-1A'},
+
+  const ALL_LESSONS = [
+    {id:'math-4-multiplication',  title:'Multiplication',     subj:'math',    grade:4, icon:'📐'},
+    {id:'math-4-long-division',   title:'Long Division',      subj:'math',    grade:4, icon:'📐'},
+    {id:'math-5-fractions',       title:'Fractions',          subj:'math',    grade:5, icon:'📐'},
+    {id:'math-5-decimals',        title:'Decimals',           subj:'math',    grade:5, icon:'📐'},
+    {id:'math-6-ratios',          title:'Ratios',             subj:'math',    grade:6, icon:'📐'},
+    {id:'math-6-percentages',     title:'Percentages',        subj:'math',    grade:6, icon:'📐'},
+    {id:'science-4-ecosystems',   title:'Ecosystems',         subj:'science', grade:4, icon:'⚗️'},
+    {id:'science-5-cells',        title:'Cell Biology',       subj:'science', grade:5, icon:'⚗️'},
+    {id:'science-6-earth',        title:'Earth Science',      subj:'science', grade:6, icon:'⚗️'},
+    {id:'spanish-4-greetings',    title:'Greetings',          subj:'spanish', grade:4, icon:'🌎'},
+    {id:'spanish-4-numbers',      title:'Numbers 1–20',       subj:'spanish', grade:4, icon:'🌎'},
+    {id:'spanish-5-beginning',    title:'Beginner Spanish',   subj:'spanish', grade:5, icon:'🌎'},
   ];
-  const done = allLessons.filter(l => progress[l.id]?.completed);
-  const avgScore = done.length ? Math.round(done.reduce((s,l) => s + (progress[l.id]?.score||0), 0) / done.length) : 0;
+
+  const done    = ALL_LESSONS.filter(l => progress[l.id]?.completed);
+  const avgScore = done.length
+    ? Math.round(done.reduce((s,l) => s + (progress[l.id]?.score||0), 0) / done.length)
+    : 0;
+
   const mathDone = done.filter(l=>l.subj==='math').length;
   const sciDone  = done.filter(l=>l.subj==='science').length;
   const spaDone  = done.filter(l=>l.subj==='spanish').length;
+  const totalMath = ALL_LESSONS.filter(l=>l.subj==='math').length;
+  const totalSci  = ALL_LESSONS.filter(l=>l.subj==='science').length;
+  const totalSpa  = ALL_LESSONS.filter(l=>l.subj==='spanish').length;
 
-  const alerts = [];
-  if (avgScore > 0 && avgScore < 60) alerts.push({type:'warn', msg:'Average score is below 60%. Extra practice recommended.'});
-  if (done.length === 0) alerts.push({type:'info', msg:'No lessons completed yet. Encourage your child to start!'});
-  if (avgScore >= 85) alerts.push({type:'good', msg:'Great job! Avg score is above 85% — your child is thriving.'});
+  const streak = (() => { try { return JSON.parse(localStorage.getItem('learnedu-xp') || '{}').streak || 0; } catch { return 0; } })();
+
+  const lvlLabel = avgScore >= 90 ? '🏆 Champion'
+                 : avgScore >= 80 ? '🚀 Trailblazer'
+                 : avgScore >= 65 ? '🎯 Achiever'
+                 : avgScore >= 50 ? '🔭 Explorer'
+                 : avgScore > 0   ? '🌱 Seedling'
+                 : '—';
+
+  const lvlColor = avgScore >= 90 ? '#7c3aed' : avgScore >= 80 ? '#E8562A' : avgScore >= 65 ? '#059669' : avgScore >= 50 ? '#0369a1' : '#d97706';
+
+  const recentLessons = done.slice().sort((a,b) => {
+    const da = progress[a.id]?.date ? new Date(progress[a.id].date).getTime() : 0;
+    const db = progress[b.id]?.date ? new Date(progress[b.id].date).getTime() : 0;
+    return db - da;
+  }).slice(0,5);
+
+  const upcoming = ALL_LESSONS.filter(l => !progress[l.id]?.completed).slice(0,4);
 
   const teacherNotes = [
-    { from:'Ms. Rivera',  subj:'Math',    note:'Doing well on multiplication. Fractions need practice.', date:'Apr 25'},
-    { from:'Mr. Thompson',subj:'Science', note:'Strong understanding of ecosystems. Cell unit coming up.', date:'Apr 23'},
-    { from:'Sra. López',  subj:'Spanish', note:'Excellent participation. Numbers vocabulary is solid.', date:'Apr 22'},
+    { from:'Ms. Rivera',   subj:'Math',    color:'#E8562A', note:'Doing great on multiplication. Fractions need more practice — try the Grade 5 fractions lesson.', date:'Apr 28'},
+    { from:'Mr. Thompson', subj:'Science', color:'#059669', note:'Strong understanding of ecosystems. Cell Biology unit starting next week.', date:'Apr 26'},
+    { from:'Sra. López',   subj:'Spanish', color:'#7c3aed', note:'Excellent participation. Numbers vocabulary is solid — ready for Beginner Spanish.', date:'Apr 24'},
   ];
 
-  return `
-    ${_dashNav('parent','Parent','🏠')}
-    <div style="max-width:800px;margin:0 auto;padding:36px 20px 80px">
+  const TABS = [
+    {id:'overview',  label:'📊 Overview'},
+    {id:'progress',  label:'📈 Progress'},
+    {id:'activity',  label:'📅 Activity'},
+    {id:'messages',  label:'✉️ Messages'},
+  ];
+  const tab = 'overview'; // Parent dashboard defaults to overview (single-page for now)
 
-      <!-- Header -->
-      <div style="display:flex;align-items:center;gap:16px;margin-bottom:28px">
-        <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#0369a1,#38bdf8);display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0">👧</div>
-        <div>
-          <h1 style="font-size:1.6rem;font-weight:900;letter-spacing:-0.5px;margin-bottom:2px">Your Child's Progress</h1>
-          <p style="font-size:0.85rem;color:#6b7280;font-weight:500">Week of Apr 27 · Spring 2026 · <span style="color:#E8562A;font-weight:700">Mockup</span></p>
+  const topBar = `
+    <div style="background:white;border-bottom:2px solid #e5e7eb;position:sticky;top:0;z-index:100">
+      <div style="max-width:1280px;margin:0 auto;padding:0 28px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0 10px;flex-wrap:wrap;gap:8px">
+          <div>
+            <div style="font-size:0.68rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.07em">Learn.edu Parent Portal</div>
+            <h1 style="font-size:1.5rem;font-weight:900;color:#111;letter-spacing:-0.5px;margin-top:1px">Your Child's Learning</h1>
+          </div>
+          <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
+            <span style="background:#0369a118;color:#0369a1;padding:6px 14px;border-radius:999px;font-size:0.78rem;font-weight:800">🏠 Parent View</span>
+            <button onclick="App.go('home')" style="background:#f3f4f6;color:#374151;border:none;border-radius:9px;padding:8px 14px;font-weight:700;font-size:0.8rem;cursor:pointer;font-family:inherit">👁️ Preview App</button>
+            <button onclick="App.logout()" style="background:none;border:1.5px solid #e5e7eb;color:#6b7280;border-radius:9px;padding:7px 12px;font-size:0.76rem;font-weight:700;cursor:pointer;font-family:inherit">Sign Out</button>
+          </div>
         </div>
       </div>
+    </div>`;
 
-      <!-- Alerts -->
-      ${alerts.length ? alerts.map(a => `
-        <div style="background:${a.type==='warn'?'#fef3c7':a.type==='good'?'#dcfce7':'#dbeafe'};border-left:4px solid ${a.type==='warn'?'#d97706':a.type==='good'?'#059669':'#0369a1'};border-radius:12px;padding:14px 16px;margin-bottom:12px;font-size:0.88rem;font-weight:600;color:#374151">
-          ${a.type==='warn'?'⚠️':a.type==='good'?'🎉':'ℹ️'} ${a.msg}
-        </div>`).join('') : ''}
+  const wrap = html => `<div style="max-width:1280px;margin:0 auto;padding:28px 28px 80px">${html}</div>`;
 
-      <!-- Stats -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
-        ${_statCard('✅', done.length, 'Completed', '#059669')}
-        ${_statCard('📊', (avgScore||'—')+(avgScore?'%':''), 'Avg Score', '#E8562A')}
-        ${_statCard('⏱️', done.length*12+'m', 'Time Spent', '#0369a1')}
-        ${_statCard('📚', 9-done.length, 'Remaining', '#7c3aed')}
-      </div>
-
-      <!-- Subject breakdown -->
-      <div style="background:white;border-radius:20px;padding:24px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,0.06)">
-        <h2 style="font-size:1rem;font-weight:900;margin-bottom:16px">Subject Progress</h2>
-        ${[
-          {label:'📐 Math',    done:mathDone, total:5, color:'var(--math)'},
-          {label:'⚗️ Science', done:sciDone,  total:2, color:'var(--sci)'},
-          {label:'🌎 Spanish', done:spaDone,  total:2, color:'var(--spa)'},
-        ].map(s=>`
-          <div style="margin-bottom:16px">
-            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-              <span style="font-size:0.9rem;font-weight:700">${s.label}</span>
-              <span style="font-size:0.82rem;font-weight:700;color:#6b7280">${s.done} of ${s.total} lessons</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px">${_bar(s.done/s.total*100, s.color)}</div>
-          </div>`).join('')}
-      </div>
-
-      <!-- Teacher notes -->
-      <div style="background:white;border-radius:20px;padding:24px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,0.06)">
-        <h2 style="font-size:1rem;font-weight:900;margin-bottom:14px">📝 Teacher Notes</h2>
-        ${teacherNotes.map(n=>`
-          <div style="padding:14px 0;border-bottom:1px solid #f3f4f6">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
-              <span style="font-size:0.85rem;font-weight:800">${n.from} <span style="color:#9ca3af;font-weight:600">· ${n.subj}</span></span>
-              <span style="font-size:0.75rem;color:#9ca3af">${n.date}</span>
-            </div>
-            <p style="font-size:0.86rem;color:#374151;line-height:1.5;margin:0">${n.note}</p>
-          </div>`).join('')}
-      </div>
-
-      <!-- Weekly tip -->
-      <div style="background:#fff3ef;border-radius:20px;padding:20px 24px;border:2px solid #E8562A18">
-        <div style="font-size:0.78rem;font-weight:800;color:#E8562A;margin-bottom:6px">💡 PARENT TIP THIS WEEK</div>
-        <p style="font-size:0.9rem;color:#374151;font-weight:500;line-height:1.5;margin:0">Try doing one lesson together — watch your child explain the concept back to you. Teaching something is the best way to learn it.</p>
+  const statCard = (icon, val, label, color) => `
+    <div style="background:white;border-radius:18px;padding:22px 24px;box-shadow:0 1px 8px rgba(0,0,0,0.07);display:flex;align-items:center;gap:14px">
+      <div style="width:48px;height:48px;border-radius:14px;background:${color}22;display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0">${icon}</div>
+      <div>
+        <div style="font-size:1.8rem;font-weight:900;color:${color};line-height:1">${val}</div>
+        <div style="font-size:0.72rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-top:4px">${label}</div>
       </div>
     </div>`;
+
+  const progressBar = (done, total, color) => {
+    const pct = total > 0 ? Math.round(done/total*100) : 0;
+    return `<div style="background:#f3f4f6;border-radius:999px;height:8px;overflow:hidden;flex:1">
+      <div style="background:${color};height:100%;width:${pct}%;border-radius:999px;transition:width 0.5s ease"></div>
+    </div>`;
+  };
+
+  const body = wrap(`
+    <!-- Stats row -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:32px">
+      ${statCard('✅', done.length, 'Lessons Done', '#059669')}
+      ${statCard('📊', avgScore ? avgScore+'%' : '—', 'Avg Score', '#E8562A')}
+      ${statCard('🔥', streak || '0', 'Day Streak', '#d97706')}
+      ${statCard('⚡', lvlLabel, 'Spark Level', lvlColor)}
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:start">
+      <!-- Left column -->
+      <div>
+        <!-- Subject Progress -->
+        <div style="background:white;border-radius:18px;padding:24px;box-shadow:0 1px 8px rgba(0,0,0,0.07);margin-bottom:20px">
+          <div style="font-size:0.75rem;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:18px">Subject Progress</div>
+          ${[
+            {label:'📐 Math',    done:mathDone, total:totalMath, color:'#E8562A'},
+            {label:'⚗️ Science', done:sciDone,  total:totalSci,  color:'#059669'},
+            {label:'🌎 Spanish', done:spaDone,  total:totalSpa,  color:'#7c3aed'},
+          ].map(s => `
+            <div style="margin-bottom:18px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <span style="font-size:0.92rem;font-weight:800">${s.label}</span>
+                <span style="font-size:0.82rem;color:#6b7280;font-weight:700">${s.done} / ${s.total} lessons</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                ${progressBar(s.done, s.total, s.color)}
+                <span style="font-size:0.82rem;font-weight:900;color:${s.color};min-width:36px">${s.total>0?Math.round(s.done/s.total*100):0}%</span>
+              </div>
+            </div>`).join('')}
+        </div>
+
+        <!-- Recent Activity -->
+        <div style="background:white;border-radius:18px;padding:24px;box-shadow:0 1px 8px rgba(0,0,0,0.07);margin-bottom:20px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div style="font-size:0.75rem;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em">Recent Lessons</div>
+            <button onclick="App.go('home')" style="font-size:0.75rem;font-weight:700;color:#E8562A;background:none;border:none;cursor:pointer">View All →</button>
+          </div>
+          ${recentLessons.length ? recentLessons.map(l => {
+            const p = progress[l.id];
+            const sc = p?.score || 0;
+            const scColor = sc>=80?'#059669':sc>=65?'#d97706':'#dc2626';
+            const timeAgo = p?.date ? (() => {
+              const d = Math.floor((Date.now()-new Date(p.date).getTime())/86400000);
+              return d===0?'Today':d===1?'Yesterday':d+' days ago';
+            })() : 'Recently';
+            return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6">
+              <div style="width:36px;height:36px;border-radius:10px;background:${l.subj==='math'?'#E8562A':l.subj==='science'?'#059669':'#7c3aed'}18;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0">${l.icon}</div>
+              <div style="flex:1">
+                <div style="font-size:0.88rem;font-weight:800">${l.title}</div>
+                <div style="font-size:0.72rem;color:#9ca3af">Grade ${l.grade} · ${timeAgo}</div>
+              </div>
+              <div style="font-size:0.9rem;font-weight:900;color:${scColor}">${sc}%</div>
+              <span style="background:#dcfce7;color:#059669;font-size:0.68rem;font-weight:800;padding:2px 8px;border-radius:999px">✓ Done</span>
+            </div>`;
+          }).join('') : `<div style="text-align:center;padding:28px;color:#9ca3af;font-size:0.88rem">No lessons completed yet.<br><button onclick="App.go('home')" style="margin-top:12px;background:#E8562A;color:white;border:none;border-radius:9px;padding:9px 18px;font-weight:800;cursor:pointer;font-family:inherit">Start Learning →</button></div>`}
+        </div>
+
+        <!-- Upcoming Lessons -->
+        ${upcoming.length ? `
+        <div style="background:white;border-radius:18px;padding:24px;box-shadow:0 1px 8px rgba(0,0,0,0.07)">
+          <div style="font-size:0.75rem;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:16px">Up Next</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            ${upcoming.map(l => `
+              <div onclick="App.go('lesson/${l.id}')" style="background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:12px;padding:14px;cursor:pointer;transition:border-color 0.15s" onmouseover="this.style.borderColor='#E8562A'" onmouseout="this.style.borderColor='#e5e7eb'">
+                <div style="font-size:1.3rem;margin-bottom:6px">${l.icon}</div>
+                <div style="font-size:0.86rem;font-weight:800">${l.title}</div>
+                <div style="font-size:0.72rem;color:#9ca3af;margin-top:2px">Grade ${l.grade}</div>
+              </div>`).join('')}
+          </div>
+        </div>` : ''}
+      </div>
+
+      <!-- Right column -->
+      <div>
+        <!-- Weekly Report Card -->
+        <div style="background:linear-gradient(135deg,#0369a1,#0891b2);border-radius:18px;padding:24px;margin-bottom:16px;color:white">
+          <div style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;opacity:0.8;margin-bottom:6px">Weekly Report</div>
+          <div style="font-size:2.2rem;font-weight:900;letter-spacing:-1px;margin-bottom:2px">${done.length} <span style="font-size:1rem;opacity:0.8">lessons done</span></div>
+          <div style="font-size:0.88rem;opacity:0.85;margin-bottom:16px">Week of Apr 28, 2026</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="background:rgba(255,255,255,0.15);border-radius:12px;padding:12px;text-align:center">
+              <div style="font-size:1.5rem;font-weight:900">${avgScore || '—'}${avgScore?'%':''}</div>
+              <div style="font-size:0.68rem;opacity:0.8;font-weight:700;margin-top:2px">Avg Score</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.15);border-radius:12px;padding:12px;text-align:center">
+              <div style="font-size:1.5rem;font-weight:900">${streak || 0}🔥</div>
+              <div style="font-size:0.68rem;opacity:0.8;font-weight:700;margin-top:2px">Day Streak</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Teacher Notes -->
+        <div style="background:white;border-radius:18px;padding:24px;box-shadow:0 1px 8px rgba(0,0,0,0.07);margin-bottom:16px">
+          <div style="font-size:0.75rem;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:16px">Teacher Notes</div>
+          ${teacherNotes.map(n => `
+            <div style="padding:12px 0;border-bottom:1px solid #f3f4f6">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+                <div style="width:28px;height:28px;border-radius:50%;background:${n.color}22;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:900;color:${n.color}">${n.from[0]}</div>
+                <div>
+                  <span style="font-size:0.82rem;font-weight:800">${n.from}</span>
+                  <span style="font-size:0.72rem;color:#9ca3af;margin-left:6px">${n.subj} · ${n.date}</span>
+                </div>
+              </div>
+              <p style="font-size:0.82rem;color:#374151;line-height:1.5;margin:0;padding-left:36px">${n.note}</p>
+            </div>`).join('')}
+          <button onclick="Modal.show('Message Teacher', Modal.select('Teacher',['Ms. Rivera (Math)','Mr. Thompson (Science)','Sra. López (Spanish)']) + '<div style=&quot;margin-bottom:14px&quot;><label style=&quot;display:block;font-size:0.78rem;font-weight:800;color:#374151;margin-bottom:5px&quot;>Message</label><textarea placeholder=&quot;Type your message...&quot; style=&quot;width:100%;border:1.5px solid #e5e7eb;border-radius:10px;padding:10px 13px;font-size:0.88rem;font-family:inherit;outline:none;box-sizing:border-box;height:90px;resize:none&quot;></textarea></div>', [{label:'Send ✉️', fn:\"Modal.toast('Message sent to teacher!');Modal.close()\", color:'#0369a1'}])" style="margin-top:14px;background:#f3f4f6;border:none;border-radius:9px;padding:8px 16px;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;width:100%">✉️ Message a Teacher</button>
+        </div>
+
+        <!-- Quick Actions -->
+        <div style="background:white;border-radius:18px;padding:20px;box-shadow:0 1px 8px rgba(0,0,0,0.07)">
+          <div style="font-size:0.75rem;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:14px">Quick Actions</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button onclick="App.go('spark')" style="background:#7c3aed18;color:#7c3aed;border:1.5px solid #7c3aed33;border-radius:12px;padding:12px 16px;font-weight:800;font-size:0.84rem;cursor:pointer;font-family:inherit;text-align:left">⚡ Take a Spark Assessment</button>
+            <button onclick="App.go('home')" style="background:#E8562A18;color:#E8562A;border:1.5px solid #E8562A33;border-radius:12px;padding:12px 16px;font-weight:800;font-size:0.84rem;cursor:pointer;font-family:inherit;text-align:left">📚 Browse All Lessons</button>
+            <button onclick="App.go('study')" style="background:#05996918;color:#059669;border:1.5px solid #05996933;border-radius:12px;padding:12px 16px;font-weight:800;font-size:0.84rem;cursor:pointer;font-family:inherit;text-align:left">🧠 Study Tools</button>
+          </div>
+        </div>
+      </div>
+    </div>`);
+
+  return topBar + body;
 };
 
-// ============================================================
-//  XP Rewards Page
-// ============================================================
+
+
 Views.rewards = function() {
   const s     = XP.getState();
   const lvl   = XP.level(s.total);
@@ -4382,7 +4598,7 @@ window.AdminPanel = {
     });
   },
   showAddTeacher() {
-    alert('Add Teacher form coming soon! Fields: Name, Email, School, Subject, Classes.');
+    Modal.show('Add Teacher', Modal.field('Full Name','text','e.g. Ms. Rivera') + Modal.field('Email','email','teacher@school.edu') + Modal.select('School',['Lincoln Middle School','Roosevelt Elementary','Jefferson High School','Westside Academy','Sunrise STEM Charter']) + Modal.select('Subject',['Math','Science','Spanish','ELA','History']) + Modal.field('Number of Classes','number','e.g. 3'), [{label:'Add Teacher', fn:"Modal.toast('Teacher invited!');Modal.close()", color:'#0369a1'}]);
   },
   filterSpark(query) {
     const q = (query || '').toLowerCase();
