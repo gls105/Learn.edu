@@ -81,7 +81,7 @@ const App = {
       const subtab = parts[2] || 'overview';
       if      (role === 'student') app.innerHTML = Views.dashboardStudent();
       else if (role === 'teacher') app.innerHTML = Views.dashboardTeacher(parts[2] || 'overview');
-      else if (role === 'admin')   app.innerHTML = Views.dashboardAdmin(subtab);
+      else if (role === 'admin')   { app.classList.add('full-bleed'); app.innerHTML = Views.dashboardAdmin(subtab); }
       else if (role === 'parent')  app.innerHTML = Views.dashboardParent();
       else                         app.innerHTML = Views.dashboardPicker();
 
