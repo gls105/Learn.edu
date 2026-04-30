@@ -8,8 +8,8 @@ const App = {
   go(hash) { location.hash = hash; },
 
   route() {
-    // Remove student-home full-bleed on every route change
-    document.getElementById('app')?.classList.remove('sh-full');
+    // Remove per-route classes on every route change
+    document.getElementById('app')?.classList.remove('sh-full', 'admin-full');
     const raw   = location.hash.slice(1) || 'home';
     const parts = raw.split('/');
     const view  = parts[0];
@@ -81,7 +81,7 @@ const App = {
       const subtab = parts[2] || 'overview';
       if      (role === 'student') app.innerHTML = Views.dashboardStudent();
       else if (role === 'teacher') app.innerHTML = Views.dashboardTeacher(parts[2] || 'overview');
-      else if (role === 'admin')   { app.classList.add('full-bleed'); app.innerHTML = Views.dashboardAdmin(subtab); }
+      else if (role === 'admin')   { app.classList.add('admin-full'); app.innerHTML = Views.dashboardAdmin(subtab); }
       else if (role === 'parent')  app.innerHTML = Views.dashboardParent();
       else                         app.innerHTML = Views.dashboardPicker();
 

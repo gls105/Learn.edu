@@ -54,6 +54,13 @@ body {
   height: 100dvh;
   overflow: hidden;
 }
+/* Admin / wide dashboards — removes 860px cap, keeps scroll */
+#app.admin-full {
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
 /* Student home full-bleed */
 #app.sh-full {
   max-width: 100% !important;
