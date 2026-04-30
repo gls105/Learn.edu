@@ -2538,11 +2538,17 @@ function updateFlashcard() {
     const gradeDelta = pct >= 90 ? 2 : pct >= 80 ? 1 : pct >= 70 ? 0 : pct >= 55 ? -1 : pct >= 40 ? -2 : -3;
     const gradeLevel = Math.max(4, Math.min(9, userGrade + gradeDelta));
 
-    // Tier letter
-    const tier = pct >= 90 ? 'A' : pct >= 80 ? 'B' : pct >= 70 ? 'C' : pct >= 55 ? 'D' : 'F';
-    const tierColor = tier==='A'?'#059669':tier==='B'?'#0369a1':tier==='C'?'#d97706':tier==='D'?'#dc2626':'#7f1d1d';
-    const tierBg    = tier==='A'?'#dcfce7':tier==='B'?'#dbeafe':tier==='C'?'#fef3c7':tier==='D'?'#fee2e2':'#fca5a5';
-    const tierLabel = tier==='A'?'Excellent':tier==='B'?'Good':tier==='C'?'Keep Going':tier==='D'?'Almost There':'Let\'s Build Stronger Foundations';
+    // Spark Level (replaces old A/B/C/D/F tier system)
+    const _lvlData = pct>=90 ? {id:'champion',   icon:'🏆', label:'Champion',    color:'#7c3aed', bg:'#f5f3ff'}
+                   : pct>=80 ? {id:'trailblazer',icon:'🚀', label:'Trailblazer', color:'#E8562A', bg:'#fff3ef'}
+                   : pct>=65 ? {id:'achiever',   icon:'🎯', label:'Achiever',    color:'#059669', bg:'#ecfdf5'}
+                   : pct>=50 ? {id:'explorer',   icon:'🔭', label:'Explorer',    color:'#0369a1', bg:'#e0f2fe'}
+                   :           {id:'seedling',   icon:'🌱', label:'Seedling',    color:'#d97706', bg:'#fffbeb'};
+    const tier      = _lvlData.label;
+    const tierIcon  = _lvlData.icon;
+    const tierColor = _lvlData.color;
+    const tierBg    = _lvlData.bg;
+    const tierLabel = _lvlData.label;
 
     // ── Personalised next-steps recommendations ────────────────
     const byS2 = state.bySubj || {};
@@ -2600,7 +2606,7 @@ function updateFlashcard() {
                   : gradeDelta === -1 ? 'Approaching grade level'
                   : 'Below grade level';
     const vsColor = gradeDelta >= 1 ? '#059669' : gradeDelta === 0 ? '#0369a1' : '#dc2626';
-    const sparkCode = gradeLevel + '-' + tier + '-' + pct;
+    const sparkCode = 'GR' + gradeLevel + ' · ' + tierIcon + ' ' + tier + ' · ' + pct + '%';
     const isRushed  = secsPerQ < 5;
     const tags = [];
     if (pct >= 90) tags.push({label:'Outstanding',        c:'#166534', bg:'#dcfce7'});
@@ -2631,8 +2637,9 @@ function updateFlashcard() {
               <div style="font-size:0.6rem;font-weight:800;color:#6b7280;text-transform:uppercase;margin-top:2px">Grade</div>
             </div>
             <div style="padding:16px 22px;text-align:center;border-right:1px solid #333">
-              <div style="font-size:2rem;font-weight:900;color:${tierColor};background:${tierBg};border-radius:8px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;margin:0 auto;line-height:1">${tier}</div>
-              <div style="font-size:0.6rem;font-weight:800;color:#6b7280;text-transform:uppercase;margin-top:4px">Tier</div>
+              <div style="font-size:1.6rem;line-height:1;margin:0 auto">${tierIcon}</div>
+              <div style="font-size:0.72rem;font-weight:900;color:${tierColor};margin-top:4px;white-space:nowrap">${tier}</div>
+              <div style="font-size:0.6rem;font-weight:800;color:#6b7280;text-transform:uppercase;margin-top:2px">Level</div>
             </div>
             <div style="padding:16px 22px;text-align:center">
               <div style="font-size:2rem;font-weight:900;color:white;letter-spacing:-1px;line-height:1">${pct}<span style="font-size:1rem">%</span></div>
@@ -2667,7 +2674,7 @@ function updateFlashcard() {
             <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6">
               <span style="font-size:1rem">${s.icon}</span>
               <span style="flex:1;font-weight:700;font-size:0.88rem">${s.label}</span>
-              <span style="font-family:monospace;font-size:0.85rem;font-weight:800;color:#111">${gradeLevel}-${s.st}-${s.sp}%</span>
+              <span style="font-size:0.82rem;font-weight:800;color:#111">${s.sp}%</span>
               <div style="width:60px;height:6px;background:#f3f4f6;border-radius:999px;overflow:hidden"><div style="height:100%;width:${s.sp}%;background:${s.color};border-radius:999px"></div></div>
             </div>`).join('')}
         </div>` : ''}
@@ -2683,7 +2690,7 @@ function updateFlashcard() {
           <div style="font-size:0.7rem;font-weight:800;color:#9ca3af;text-transform:uppercase;margin-bottom:6px">How to read your score</div>
           <div style="font-size:0.82rem;color:#374151;font-weight:500;line-height:1.5">
             <strong style="color:#E8562A">${gradeLevel}</strong> = performing at Grade ${gradeLevel} level &nbsp;·&nbsp;
-            <strong style="color:${tierColor}">${tier}</strong> = ${tierLabel} &nbsp;·&nbsp;
+            ${tierIcon} <strong style="color:${tierColor}">${tier}</strong> = ${tierLabel} &nbsp;·&nbsp;
             <strong>${pct}%</strong> = ${correct} of ${total} correct
           </div>
         </div>
