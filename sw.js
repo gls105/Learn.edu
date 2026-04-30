@@ -1,5 +1,5 @@
 // Learn.edu — Service Worker (offline support)
-const CACHE = 'learnedu-v23';
+const CACHE = 'learnedu-v24';
 const CORE  = [
   '/',
   '/index.html',
@@ -7,6 +7,7 @@ const CORE  = [
   '/js/app.js',
   '/js/views.js',
   '/js/lesson.js',
+  '/data/admin.js',
   '/data/math.js',
   '/data/science.js',
   '/data/spanish.js',

@@ -3832,46 +3832,12 @@ Views.assignCreate = function(step, subject, levelOrGrade) {
 Views.dashboardAdmin = function(tab) {
   tab = tab || 'overview';
 
-  // ── Mock Data ─────────────────────────────────────────────
-  const SCHOOLS = [
-    { id:1, name:'Lincoln Middle School',    city:'Miami, FL',       teachers:12, students:348, avgSpark:74 },
-    { id:2, name:'Roosevelt Elementary',     city:'Miami, FL',       teachers:9,  students:210, avgSpark:81 },
-    { id:3, name:'Jefferson High School',    city:'Fort Lauderdale', teachers:18, students:512, avgSpark:68 },
-    { id:4, name:'Westside Academy',         city:'Hialeah, FL',     teachers:7,  students:189, avgSpark:77 },
-    { id:5, name:'Sunrise STEM Charter',     city:'Sunrise, FL',     teachers:11, students:264, avgSpark:83 },
-  ];
-  const TEACHERS = [
-    { id:1, name:'Ms. Rivera',    school:'Lincoln Middle School',  subject:'Math',    classes:3, students:86,  status:'active' },
-    { id:2, name:'Mr. Thompson',  school:'Lincoln Middle School',  subject:'Science', classes:2, students:54,  status:'active' },
-    { id:3, name:'Ms. Chen',      school:'Roosevelt Elementary',   subject:'ELA',     classes:4, students:72,  status:'active' },
-    { id:4, name:'Mr. Patel',     school:'Jefferson High School',  subject:'Math',    classes:5, students:128, status:'active' },
-    { id:5, name:'Ms. Johnson',   school:'Westside Academy',       subject:'Spanish', classes:3, students:61,  status:'inactive' },
-    { id:6, name:'Dr. Williams',  school:'Sunrise STEM Charter',   subject:'Science', classes:4, students:88,  status:'active' },
-  ];
-  const ROSTER = [
-    { id:1, name:'Alex M.',    school:'Lincoln Middle School', grade:6, teacher:'Ms. Rivera',   sparkCode:'6-B-78', pm1:'74', pm2:'78' },
-    { id:2, name:'Jordan K.',  school:'Lincoln Middle School', grade:7, teacher:'Mr. Thompson', sparkCode:'7-A-91', pm1:'88', pm2:'91' },
-    { id:3, name:'Taylor R.',  school:'Roosevelt Elementary',  grade:5, teacher:'Ms. Chen',     sparkCode:'5-C-62', pm1:'58', pm2:'62' },
-    { id:4, name:'Morgan P.',  school:'Jefferson High School', grade:9, teacher:'Mr. Patel',    sparkCode:'9-D-54', pm1:'49', pm2:'54' },
-    { id:5, name:'Casey W.',   school:'Westside Academy',      grade:6, teacher:'Ms. Johnson',  sparkCode:'6-B-75', pm1:'70', pm2:'75' },
-    { id:6, name:'Riley S.',   school:'Sunrise STEM Charter',  grade:8, teacher:'Dr. Williams', sparkCode:'8-A-88', pm1:'82', pm2:'88' },
-  ];
-  const SPARK_RESULTS = [
-    { student:'Alex M.',   school:'Lincoln Middle',   teacher:'Ms. Rivera',  grade:6, code:'6-B-78', math:80, sci:72, spa:76, date:'Apr 14' },
-    { student:'Jordan K.', school:'Lincoln Middle',   teacher:'Ms. Rivera',  grade:7, code:'7-A-91', math:94, sci:90, spa:88, date:'Apr 14' },
-    { student:'Taylor R.', school:'Roosevelt Elem',   teacher:'Ms. Chen',    grade:5, code:'5-C-62', math:58, sci:66, spa:62, date:'Apr 28' },
-    { student:'Morgan P.', school:'Jefferson High',   teacher:'Mr. Patel',   grade:9, code:'9-D-54', math:50, sci:58, spa:54, date:'Apr 28' },
-    { student:'Casey W.',  school:'Westside Academy', teacher:'Ms. Johnson', grade:6, code:'6-B-75', math:78, sci:70, spa:76, date:'Apr 21' },
-    { student:'Riley S.',  school:'Sunrise STEM',     teacher:'Dr. Williams',grade:8, code:'8-A-88', math:90, sci:88, spa:84, date:'Apr 21' },
-  ];
-  const ASSESSMENTS = [
-    { name:'Spark PM1 — Fall Window',   period:'September 2026', status:'scheduled', window:'Sep 1–30',     schools:5, notes:'Progress Monitoring 1. Baseline assessment.' },
-    { name:'Spark PM2 — Winter Window', period:'February 2027',  status:'scheduled', window:'Feb 1–28',     schools:5, notes:'Progress Monitoring 2. Mid-year growth check.' },
-    { name:'Spark PM1 — Fall 2025',     period:'September 2025', status:'closed',    window:'Sep 1–30',     schools:5, avgScore:76, notes:'PM1 complete. Results locked.' },
-    { name:'Spark PM2 — Spring 2026',   period:'April 2026',     status:'open',      window:'Apr 1–May 15', schools:5, notes:'Current active window. Submissions accepted.' },
-  ];
-
-  const user = (typeof App !== 'undefined') ? App.getUser() : {};
+  // ── Data from data/admin.js ───────────────────────────────
+  const SCHOOLS  = (typeof ADMIN_SCHOOLS  !== 'undefined') ? ADMIN_SCHOOLS  : [];
+  const TEACHERS = (typeof ADMIN_TEACHERS !== 'undefined') ? ADMIN_TEACHERS : [];
+  const ROSTER   = (typeof ADMIN_ROSTER   !== 'undefined') ? ADMIN_ROSTER   : [];
+  const LEVELS   = (typeof SPARK_LEVELS   !== 'undefined') ? SPARK_LEVELS   : [];
+  const getLvl   = (typeof sparkLevel     !== 'undefined') ? sparkLevel : (s => ({ icon:'⭐', label:'Achiever', color:'#059669', bg:'#ecfdf5' }));
 
   // ── Top Bar ───────────────────────────────────────────────
   const TABS = [
@@ -3879,7 +3845,7 @@ Views.dashboardAdmin = function(tab) {
     {id:'schools',     label:'🏫 Schools'},
     {id:'teachers',    label:'👩‍🏫 Teachers'},
     {id:'roster',      label:'📋 Roster'},
-    {id:'spark',       label:'⚡ Spark'},
+    {id:'spark',       label:'⚡ Spark Scores'},
     {id:'assessments', label:'📈 PM1/PM2'},
     {id:'invite',      label:'✉️ Invite'},
   ];
@@ -3887,12 +3853,12 @@ Views.dashboardAdmin = function(tab) {
   const topBar = `
     <div style="background:white;border-bottom:2px solid #e5e7eb;position:sticky;top:0;z-index:100">
       <div style="max-width:1280px;margin:0 auto;padding:0 28px">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0 10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0 10px;flex-wrap:wrap;gap:8px">
           <div>
-            <div style="font-size:0.68rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.07em">Learn.edu Admin Portal</div>
-            <h1 style="font-size:1.5rem;font-weight:900;color:#111;letter-spacing:-0.5px;margin-top:1px">District Admin Panel</h1>
+            <div style="font-size:0.68rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.07em">Learn.edu · District Admin</div>
+            <h1 style="font-size:1.5rem;font-weight:900;color:#111;letter-spacing:-0.5px;margin-top:1px">Admin Panel</h1>
           </div>
-          <div style="display:flex;gap:7px;align-items:center">
+          <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
             <span style="background:#7c3aed18;color:#7c3aed;padding:6px 14px;border-radius:999px;font-size:0.78rem;font-weight:800">⚙️ Admin Access</span>
             <button onclick="App.go('home')" style="background:#f3f4f6;color:#374151;border:none;border-radius:9px;padding:8px 14px;font-weight:700;font-size:0.8rem;cursor:pointer;font-family:inherit">🏠 Home</button>
             <button onclick="App.logout()" style="background:none;border:1.5px solid #e5e7eb;color:#6b7280;border-radius:9px;padding:7px 12px;font-size:0.76rem;font-weight:700;cursor:pointer;font-family:inherit">Sign Out</button>
@@ -3904,61 +3870,74 @@ Views.dashboardAdmin = function(tab) {
       </div>
     </div>`;
 
-  const wrap = html => `<div style="max-width:1280px;margin:0 auto;padding:28px 28px 60px">${html}</div>`;
+  const wrap = html => `<div style="max-width:1280px;margin:0 auto;padding:28px 28px 80px">${html}</div>`;
 
-  // ── Stat Card Helper ─────────────────────────────────────
   const statCard = (val, label, color, icon) => `
     <div style="background:white;border-radius:18px;padding:22px 24px;box-shadow:0 1px 8px rgba(0,0,0,0.07);display:flex;align-items:center;gap:14px">
-      <div style="width:48px;height:48px;border-radius:14px;background:${color}18;display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0">${icon}</div>
+      <div style="width:48px;height:48px;border-radius:14px;background:${color}22;display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0">${icon}</div>
       <div>
         <div style="font-size:1.8rem;font-weight:900;color:${color};line-height:1">${val}</div>
         <div style="font-size:0.72rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-top:4px">${label}</div>
       </div>
     </div>`;
 
-  // ── Action Card Helper ────────────────────────────────────
   const actionCard = (color, icon, label, desc, route) => `
     <div onclick="App.go('${route}')" style="background:white;border-radius:16px;border:2px solid ${color}33;overflow:hidden;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.1)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
       <div style="background:${color};color:white;padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
         <span style="font-weight:900;font-size:0.9rem">${icon} ${label}</span>
-        <span style="font-size:0.9rem">→</span>
+        <span>→</span>
       </div>
       <div style="padding:12px 16px">
         <p style="font-size:0.78rem;color:#6b7280;line-height:1.4;margin:0">${desc}</p>
       </div>
     </div>`;
 
+  const levelBadge = lvl => `<span style="background:${lvl.bg};color:${lvl.color};font-size:0.72rem;font-weight:800;padding:3px 10px;border-radius:999px;white-space:nowrap">${lvl.icon} ${lvl.label}</span>`;
+
+  // ── Spark Level Legend ────────────────────────────────────
+  const levelLegend = `
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;background:white;border-radius:14px;padding:14px 18px;box-shadow:0 1px 6px rgba(0,0,0,0.06)">
+      <span style="font-size:0.72rem;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;align-self:center;margin-right:4px">Spark Levels:</span>
+      ${LEVELS.map(l => `<span style="background:${l.bg};color:${l.color};font-size:0.72rem;font-weight:800;padding:4px 12px;border-radius:999px">${l.icon} ${l.label} (${l.min}–${l.max}%)</span>`).join('')}
+    </div>`;
+
   // ── OVERVIEW TAB ─────────────────────────────────────────
+  const totalStudents = SCHOOLS.reduce((s,x)=>s+x.students,0).toLocaleString();
+  const totalTeachers = SCHOOLS.reduce((s,x)=>s+x.teachers,0);
+  const avgSpark = Math.round(SCHOOLS.reduce((s,x)=>s+x.avgSpark,0)/SCHOOLS.length);
+
   const overviewTab = wrap(`
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:32px">
-      ${statCard('5',     'Schools',    '#E8562A', '🏫')}
-      ${statCard('57',    'Teachers',   '#0369a1', '👩‍🏫')}
-      ${statCard('1,523', 'Students',   '#059669', '🎒')}
-      ${statCard('76%',   'Avg Spark',  '#7c3aed', '⚡')}
+      ${statCard(SCHOOLS.length, 'Schools', '#E8562A', '🏫')}
+      ${statCard(totalTeachers, 'Teachers', '#0369a1', '👩‍🏫')}
+      ${statCard(totalStudents, 'Students', '#059669', '🎒')}
+      ${statCard(avgSpark+'%', 'Avg Spark', '#7c3aed', '⚡')}
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:32px">
       ${actionCard('#E8562A','🏫','View Schools',    'Browse all district schools and stats.',           'dashboard/admin/schools')}
       ${actionCard('#0369a1','👩‍🏫','Manage Teachers','Add teachers, assign classes, view data.',         'dashboard/admin/teachers')}
-      ${actionCard('#059669','📋','Student Roster',  'Add or import students district-wide.',            'dashboard/admin/roster')}
-      ${actionCard('#7c3aed','⚡','Spark Lookup',    'Search all Spark scores by student or school.',    'dashboard/admin/spark')}
+      ${actionCard('#059669','📋','Student Roster',  'Every student across all 5 schools.',              'dashboard/admin/roster')}
+      ${actionCard('#7c3aed','⚡','Spark Scores',    'Search all Spark scores by student or school.',    'dashboard/admin/spark')}
       ${actionCard('#d97706','📊','PM1/PM2 Results', 'View scheduled assessment windows.',               'dashboard/admin/assessments')}
       ${actionCard('#e11d48','✉️','Invite Staff',    'Send access invites to principals & admins.',      'dashboard/admin/invite')}
     </div>
     <div style="background:white;border-radius:18px;padding:24px;box-shadow:0 1px 8px rgba(0,0,0,0.07)">
-      <div style="font-size:0.75rem;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:16px">School Performance Summary</div>
+      <div style="font-size:0.75rem;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:16px">School Performance</div>
       ${SCHOOLS.map(s => {
-        const barColor = s.avgSpark >= 80 ? '#059669' : s.avgSpark >= 70 ? '#d97706' : '#dc2626';
-        const barPct   = s.avgSpark;
-        return `<div style="padding:12px 0;border-bottom:1px solid #f3f4f6">
+        const lvl = getLvl(s.avgSpark);
+        return `<div style="padding:14px 0;border-bottom:1px solid #f3f4f6">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
             <div style="flex:1">
-              <div style="font-size:0.9rem;font-weight:800">${s.name}</div>
-              <div style="font-size:0.72rem;color:#9ca3af">${s.city} · ${s.teachers} teachers · ${s.students} students</div>
+              <div style="font-size:0.92rem;font-weight:800">${s.name}</div>
+              <div style="font-size:0.72rem;color:#9ca3af">${s.city} · Grades ${s.grades} · ${s.teachers} teachers · ${s.students.toLocaleString()} students</div>
             </div>
-            <div style="font-size:1rem;font-weight:900;color:${barColor}">${s.avgSpark}%</div>
+            ${levelBadge(lvl)}
+            <div style="text-align:right;min-width:48px">
+              <div style="font-size:1.1rem;font-weight:900;color:${lvl.color}">${s.avgSpark}%</div>
+            </div>
           </div>
           <div style="background:#f3f4f6;border-radius:999px;height:6px;overflow:hidden">
-            <div style="background:${barColor};height:100%;width:${barPct}%;border-radius:999px;transition:width 0.6s ease"></div>
+            <div style="background:${lvl.color};height:100%;width:${s.avgSpark}%;border-radius:999px"></div>
           </div>
         </div>`;
       }).join('')}
@@ -3966,28 +3945,32 @@ Views.dashboardAdmin = function(tab) {
 
   // ── SCHOOLS TAB ──────────────────────────────────────────
   const schoolsTab = wrap(`
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-      <div><h2 style="font-size:1.15rem;font-weight:900;margin:0">Schools</h2><p style="font-size:0.82rem;color:#6b7280;margin:4px 0 0">All schools in the district</p></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div><h2 style="font-size:1.15rem;font-weight:900;margin:0">All Schools</h2><p style="font-size:0.82rem;color:#6b7280;margin:4px 0 0">${SCHOOLS.length} schools · ${totalStudents} total students</p></div>
       <button onclick="alert('Add School form coming soon!')" style="background:#7c3aed;color:white;border:none;border-radius:10px;padding:9px 18px;font-size:0.82rem;font-weight:800;cursor:pointer;font-family:inherit">+ Add School</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">
       ${SCHOOLS.map(s => {
-        const sc = s.avgSpark >= 80 ? '#059669' : s.avgSpark >= 70 ? '#d97706' : '#dc2626';
+        const lvl = getLvl(s.avgSpark);
         return `<div style="background:white;border-radius:16px;padding:20px;box-shadow:0 1px 8px rgba(0,0,0,0.07)">
           <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
-            <div style="width:44px;height:44px;border-radius:12px;background:#E8562A18;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0">🏫</div>
+            <div style="width:48px;height:48px;border-radius:14px;background:#E8562A18;display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0">🏫</div>
             <div style="flex:1">
               <div style="font-size:0.95rem;font-weight:900">${s.name}</div>
-              <div style="font-size:0.75rem;color:#6b7280;margin-top:2px">${s.city}</div>
+              <div style="font-size:0.74rem;color:#6b7280;margin-top:2px">${s.city} · Grades ${s.grades}</div>
+              <div style="margin-top:6px">${levelBadge(lvl)}</div>
             </div>
-            <div style="text-align:right">
-              <div style="font-size:1.2rem;font-weight:900;color:${sc}">${s.avgSpark}%</div>
-              <div style="font-size:0.64rem;color:#9ca3af;font-weight:700">AVG SPARK</div>
+            <div style="text-align:center">
+              <div style="font-size:1.3rem;font-weight:900;color:${lvl.color}">${s.avgSpark}%</div>
+              <div style="font-size:0.62rem;color:#9ca3af;font-weight:700">AVG SPARK</div>
             </div>
+          </div>
+          <div style="background:#f3f4f6;border-radius:999px;height:5px;overflow:hidden;margin-bottom:12px">
+            <div style="background:${lvl.color};height:100%;width:${s.avgSpark}%;border-radius:999px"></div>
           </div>
           <div style="display:flex;gap:8px">
             <span style="font-size:0.72rem;background:#f3f4f6;border-radius:6px;padding:3px 10px;font-weight:700">👩‍🏫 ${s.teachers} teachers</span>
-            <span style="font-size:0.72rem;background:#f3f4f6;border-radius:6px;padding:3px 10px;font-weight:700">🎒 ${s.students} students</span>
+            <span style="font-size:0.72rem;background:#f3f4f6;border-radius:6px;padding:3px 10px;font-weight:700">🎒 ${s.students.toLocaleString()} students</span>
           </div>
         </div>`;
       }).join('')}
@@ -3995,103 +3978,117 @@ Views.dashboardAdmin = function(tab) {
 
   // ── TEACHERS TAB ────────────────────────────────────────
   const teachersTab = wrap(`
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-      <div><h2 style="font-size:1.15rem;font-weight:900;margin:0">Teachers</h2><p style="font-size:0.82rem;color:#6b7280;margin:4px 0 0">All teachers across the district</p></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div><h2 style="font-size:1.15rem;font-weight:900;margin:0">Teachers</h2><p style="font-size:0.82rem;color:#6b7280;margin:4px 0 0">${TEACHERS.length} teachers across ${SCHOOLS.length} schools</p></div>
       <button onclick="alert('Invite Teacher coming soon!')" style="background:#0369a1;color:white;border:none;border-radius:10px;padding:9px 18px;font-size:0.82rem;font-weight:800;cursor:pointer;font-family:inherit">+ Invite Teacher</button>
     </div>
     <div style="background:white;border-radius:18px;overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,0.07)">
-      <div style="display:grid;grid-template-columns:2fr 2fr 1fr 1fr 80px;padding:10px 20px;background:#f9fafb;border-bottom:2px solid #e5e7eb">
-        ${['Name','School','Subject','Students','Status'].map(h=>`<div style="font-size:0.72rem;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em">${h}</div>`).join('')}
-      </div>
       ${TEACHERS.map((t,i) => `
-        <div style="display:grid;grid-template-columns:2fr 2fr 1fr 1fr 80px;padding:13px 20px;border-bottom:1px solid #f3f4f6;align-items:center;${i%2===1?'background:#fafafa':''}">
+        <div style="display:grid;grid-template-columns:1fr 1.4fr 80px 80px 90px;gap:12px;padding:14px 20px;border-bottom:1px solid #f3f4f6;align-items:center;${i%2===1?'background:#fafafa':''}">
           <div style="display:flex;align-items:center;gap:9px">
-            <div style="width:32px;height:32px;border-radius:50%;background:#0369a118;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:900;color:#0369a1">${t.name[0]}</div>
-            <span style="font-size:0.88rem;font-weight:700">${t.name}</span>
+            <div style="width:34px;height:34px;border-radius:50%;background:#0369a122;display:flex;align-items:center;justify-content:center;font-size:0.82rem;font-weight:900;color:#0369a1;flex-shrink:0">${t.name.split(' ').pop()[0]}</div>
+            <div>
+              <div style="font-size:0.88rem;font-weight:700">${t.name}</div>
+              <div style="font-size:0.7rem;color:#9ca3af">${t.subject}</div>
+            </div>
           </div>
-          <div style="font-size:0.82rem;color:#6b7280">${t.school}</div>
-          <div style="font-size:0.82rem;font-weight:700">${t.subject}</div>
-          <div style="font-size:0.82rem;font-weight:700">${t.students}</div>
-          <span style="font-size:0.72rem;font-weight:800;padding:3px 10px;border-radius:999px;background:${t.status==='active'?'#d1fae5':'#fee2e2'};color:${t.status==='active'?'#059669':'#dc2626'}">${t.status}</span>
+          <div style="font-size:0.8rem;color:#6b7280">${t.school}</div>
+          <div style="font-size:0.82rem;font-weight:700;text-align:center">${t.classes} classes</div>
+          <div style="font-size:0.82rem;font-weight:700;text-align:center">${t.students} students</div>
+          <div style="text-align:center"><span style="font-size:0.72rem;font-weight:800;padding:3px 10px;border-radius:999px;background:${t.status==='active'?'#d1fae5':'#fee2e2'};color:${t.status==='active'?'#059669':'#dc2626'}">${t.status}</span></div>
         </div>`).join('')}
     </div>`);
 
   // ── ROSTER TAB ───────────────────────────────────────────
   const rosterTab = wrap(`
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-      <div><h2 style="font-size:1.15rem;font-weight:900;margin:0">Student Roster</h2><p style="font-size:0.82rem;color:#6b7280;margin:4px 0 0">District-wide student list</p></div>
-      <button onclick="alert('Import coming soon!')" style="background:#059669;color:white;border:none;border-radius:10px;padding:9px 18px;font-size:0.82rem;font-weight:800;cursor:pointer;font-family:inherit">+ Import Students</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div><h2 style="font-size:1.15rem;font-weight:900;margin:0">Student Roster</h2><p style="font-size:0.82rem;color:#6b7280;margin:4px 0 0">${ROSTER.length} students shown · ${totalStudents} district-wide</p></div>
+      <button onclick="alert('Import CSV coming soon!')" style="background:#059669;color:white;border:none;border-radius:10px;padding:9px 18px;font-size:0.82rem;font-weight:800;cursor:pointer;font-family:inherit">+ Import Students</button>
     </div>
-    <div style="background:white;border-radius:18px;overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,0.07)">
-      <div style="display:grid;grid-template-columns:2fr 2fr 1fr 2fr 1fr 1fr;padding:10px 20px;background:#f9fafb;border-bottom:2px solid #e5e7eb">
-        ${['Name','School','Grade','Teacher','PM1','PM2'].map(h=>`<div style="font-size:0.72rem;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:0.04em">${h}</div>`).join('')}
-      </div>
-      ${ROSTER.map((s,i) => `
-        <div style="display:grid;grid-template-columns:2fr 2fr 1fr 2fr 1fr 1fr;padding:12px 20px;border-bottom:1px solid #f3f4f6;align-items:center;${i%2===1?'background:#fafafa':''}">
-          <div style="font-size:0.88rem;font-weight:800">${s.name}</div>
-          <div style="font-size:0.8rem;color:#6b7280">${s.school}</div>
-          <div style="font-size:0.82rem;font-weight:700">Gr. ${s.grade}</div>
-          <div style="font-size:0.8rem;color:#6b7280">${s.teacher}</div>
-          <div style="font-size:0.82rem;font-weight:900;color:${parseInt(s.pm1)>=75?'#059669':parseInt(s.pm1)>=60?'#d97706':'#dc2626'}">${s.pm1}%</div>
-          <div style="font-size:0.82rem;font-weight:900;color:${parseInt(s.pm2)>=75?'#059669':parseInt(s.pm2)>=60?'#d97706':'#dc2626'}">${s.pm2}%</div>
-        </div>`).join('')}
-    </div>`);
+    ${levelLegend}
+    ${SCHOOLS.map(school => {
+      const students = ROSTER.filter(s => s.school === school.name);
+      if (!students.length) return '';
+      return `<div style="margin-bottom:24px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <span style="font-size:1rem">🏫</span>
+          <h3 style="font-size:0.92rem;font-weight:900;margin:0">${school.name}</h3>
+          <span style="font-size:0.72rem;color:#9ca3af;font-weight:700">${students.length} students</span>
+        </div>
+        <div style="background:white;border-radius:16px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,0.06)">
+          ${students.map((s,i) => {
+            const lvl = getLvl(s.avg);
+            return `<div style="display:grid;grid-template-columns:1.5fr 1fr 60px 1fr 80px 80px 80px;gap:10px;padding:12px 16px;border-bottom:1px solid #f3f4f6;align-items:center;${i%2===1?'background:#fafafa':''}">
+              <div style="font-size:0.86rem;font-weight:800">${s.name}</div>
+              <div style="font-size:0.76rem;color:#6b7280">${s.teacher}</div>
+              <div style="font-size:0.78rem;font-weight:700;text-align:center">Gr.${s.grade}</div>
+              <div>${levelBadge(lvl)}</div>
+              <div style="text-align:center"><div style="font-size:0.8rem;font-weight:900;color:#E8562A">${s.math}%</div><div style="font-size:0.6rem;color:#9ca3af">Math</div></div>
+              <div style="text-align:center"><div style="font-size:0.8rem;font-weight:900;color:#0891b2">${s.sci}%</div><div style="font-size:0.6rem;color:#9ca3af">Sci</div></div>
+              <div style="text-align:center"><div style="font-size:0.8rem;font-weight:900;color:#16a34a">${s.spa}%</div><div style="font-size:0.6rem;color:#9ca3af">Spa</div></div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }).join('')}`);
 
   // ── SPARK TAB ────────────────────────────────────────────
   const sparkTab = wrap(`
-    <div style="margin-bottom:20px">
-      <h2 style="font-size:1.15rem;font-weight:900;margin:0 0 4px">Spark Lookup</h2>
-      <p style="font-size:0.82rem;color:#6b7280;margin:0">Search all Spark scores by student or school</p>
+    <div style="margin-bottom:16px">
+      <h2 style="font-size:1.15rem;font-weight:900;margin:0 0 4px">Spark Scores</h2>
+      <p style="font-size:0.82rem;color:#6b7280;margin:0">${ROSTER.length} students across all schools</p>
     </div>
-    <div style="background:white;border-radius:14px;padding:14px 16px;box-shadow:0 1px 8px rgba(0,0,0,0.07);margin-bottom:20px;display:flex;align-items:center;gap:10px">
+    ${levelLegend}
+    <div style="background:white;border-radius:14px;padding:12px 16px;box-shadow:0 1px 6px rgba(0,0,0,0.06);margin-bottom:20px;display:flex;align-items:center;gap:10px">
       <span style="font-size:1.1rem">🔍</span>
-      <input id="admin-spark-search" placeholder="Search by student name, school, or Spark code…" oninput="AdminPanel&&AdminPanel.filterSpark&&AdminPanel.filterSpark(this.value)" style="border:none;outline:none;flex:1;font-size:0.88rem;font-family:inherit;background:transparent">
+      <input id="admin-spark-search" placeholder="Search by name, school, or code…" oninput="document.querySelectorAll('.spark-row').forEach(r=>r.style.display=this.value&&!r.dataset.search.toLowerCase().includes(this.value.toLowerCase())?'none':'')" style="border:none;outline:none;flex:1;font-size:0.88rem;font-family:inherit;background:transparent">
     </div>
-    <div id="admin-spark-results" style="display:flex;flex-direction:column;gap:10px">
-      ${SPARK_RESULTS.map(r => {
-        const avg = Math.round((r.math+r.sci+r.spa)/3);
-        const avgColor = avg>=80?'#059669':avg>=65?'#d97706':'#dc2626';
-        return `<div style="background:white;border-radius:14px;padding:16px 20px;box-shadow:0 1px 6px rgba(0,0,0,0.06);display:flex;align-items:center;gap:16px">
-          <div style="width:40px;height:40px;border-radius:50%;background:#7c3aed18;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:900;color:#7c3aed;flex-shrink:0">${r.grade}</div>
-          <div style="flex:1">
-            <div style="font-size:0.9rem;font-weight:900">${r.student}</div>
-            <div style="font-size:0.74rem;color:#9ca3af">${r.school} · ${r.teacher} · Code: <strong>${r.code}</strong></div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${ROSTER.map(s => {
+        const lvl = getLvl(s.avg);
+        return `<div class="spark-row" data-search="${s.name} ${s.school} ${s.code}" style="background:white;border-radius:14px;padding:14px 18px;box-shadow:0 1px 6px rgba(0,0,0,0.05);display:grid;grid-template-columns:1.4fr 1.2fr 1fr 80px 80px 80px 100px;gap:10px;align-items:center">
+          <div>
+            <div style="font-size:0.88rem;font-weight:800">${s.name}</div>
+            <div style="font-size:0.68rem;color:#9ca3af;font-family:monospace;margin-top:1px">${s.code}</div>
           </div>
-          <div style="display:flex;gap:12px;text-align:center">
-            <div><div style="font-size:0.78rem;font-weight:900;color:#E8562A">${r.math}%</div><div style="font-size:0.62rem;color:#9ca3af">Math</div></div>
-            <div><div style="font-size:0.78rem;font-weight:900;color:#0891b2">${r.sci}%</div><div style="font-size:0.62rem;color:#9ca3af">Sci</div></div>
-            <div><div style="font-size:0.78rem;font-weight:900;color:#16a34a">${r.spa}%</div><div style="font-size:0.62rem;color:#9ca3af">Spa</div></div>
-          </div>
-          <div style="text-align:center;min-width:54px">
-            <div style="font-size:1.1rem;font-weight:900;color:${avgColor}">${avg}%</div>
-            <div style="font-size:0.62rem;color:#9ca3af;font-weight:700">AVG</div>
-          </div>
+          <div style="font-size:0.78rem;color:#6b7280">${s.school}</div>
+          <div style="font-size:0.76rem;color:#6b7280">${s.teacher} · Gr.${s.grade}</div>
+          <div style="text-align:center"><div style="font-size:0.82rem;font-weight:900;color:#E8562A">${s.math}%</div><div style="font-size:0.6rem;color:#9ca3af">Math</div></div>
+          <div style="text-align:center"><div style="font-size:0.82rem;font-weight:900;color:#0891b2">${s.sci}%</div><div style="font-size:0.6rem;color:#9ca3af">Sci</div></div>
+          <div style="text-align:center"><div style="font-size:0.82rem;font-weight:900;color:#16a34a">${s.spa}%</div><div style="font-size:0.6rem;color:#9ca3af">Spa</div></div>
+          <div style="text-align:right">${levelBadge(lvl)}</div>
         </div>`;
       }).join('')}
     </div>`);
 
   // ── ASSESSMENTS TAB ──────────────────────────────────────
+  const ASSESSMENTS = [
+    { name:'Spark PM1 — Fall Window',   period:'September 2026', status:'scheduled', window:'Sep 1–30',     schools:5, notes:'Baseline assessment for the school year.' },
+    { name:'Spark PM2 — Winter Window', period:'February 2027',  status:'scheduled', window:'Feb 1–28',     schools:5, notes:'Mid-year growth check.' },
+    { name:'Spark PM1 — Fall 2025',     period:'September 2025', status:'closed',    window:'Sep 1–30',     schools:5, avgSpark:76, notes:'PM1 complete. Results locked.' },
+    { name:'Spark PM2 — Spring 2026',   period:'April 2026',     status:'open',      window:'Apr 1–May 15', schools:5, notes:'Current active window. Submissions accepted.' },
+  ];
+  const statusColors = {open:'#059669',closed:'#6b7280',scheduled:'#0369a1'};
+  const statusBg     = {open:'#d1fae5',closed:'#f3f4f6',scheduled:'#dbeafe'};
+
   const assessmentsTab = wrap(`
     <div style="margin-bottom:20px">
-      <h2 style="font-size:1.15rem;font-weight:900;margin:0 0 4px">PM1 / PM2 Results</h2>
-      <p style="font-size:0.82rem;color:#6b7280;margin:0">Scheduled assessment windows and results</p>
+      <h2 style="font-size:1.15rem;font-weight:900;margin:0 0 4px">PM1 / PM2 Assessment Windows</h2>
+      <p style="font-size:0.82rem;color:#6b7280;margin:0">Scheduled and past assessment periods</p>
     </div>
     <div style="display:flex;flex-direction:column;gap:14px">
-      ${ASSESSMENTS.map(a => {
-        const statusColors = {open:'#059669',closed:'#6b7280',scheduled:'#0369a1'};
-        const statusBg     = {open:'#d1fae5',closed:'#f3f4f6',scheduled:'#dbeafe'};
-        return `<div style="background:white;border-radius:16px;padding:20px 24px;box-shadow:0 1px 8px rgba(0,0,0,0.07);display:flex;align-items:center;gap:16px">
-          <div style="flex:1">
+      ${ASSESSMENTS.map(a => `
+        <div style="background:white;border-radius:16px;padding:20px 24px;box-shadow:0 1px 8px rgba(0,0,0,0.07);display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px">
               <div style="font-size:0.95rem;font-weight:900">${a.name}</div>
               <span style="font-size:0.7rem;font-weight:800;padding:2px 10px;border-radius:999px;background:${statusBg[a.status]};color:${statusColors[a.status]}">${a.status}</span>
             </div>
             <div style="font-size:0.78rem;color:#6b7280">${a.period} · Window: ${a.window} · ${a.schools} schools</div>
-            <div style="font-size:0.78rem;color:#9ca3af;margin-top:4px">${a.notes}</div>
+            <div style="font-size:0.76rem;color:#9ca3af;margin-top:4px">${a.notes}</div>
           </div>
-          ${a.avgScore ? `<div style="text-align:center"><div style="font-size:1.3rem;font-weight:900;color:#059669">${a.avgScore}%</div><div style="font-size:0.65rem;color:#9ca3af;font-weight:700">AVG SCORE</div></div>` : ''}
-        </div>`;
-      }).join('')}
+          ${a.avgSpark ? `<div style="text-align:center"><div style="font-size:1.4rem;font-weight:900;color:#7c3aed">${a.avgSpark}%</div><div style="font-size:0.65rem;color:#9ca3af;font-weight:700">AVG SPARK</div></div>` : ''}
+        </div>`).join('')}
     </div>`);
 
   // ── INVITE TAB ───────────────────────────────────────────
@@ -4108,22 +4105,15 @@ Views.dashboardAdmin = function(tab) {
       <div style="margin-bottom:20px">
         <label style="display:block;font-size:0.78rem;font-weight:800;color:#374151;margin-bottom:6px">Role</label>
         <select style="width:100%;border:1.5px solid #e5e7eb;border-radius:10px;padding:10px 14px;font-size:0.88rem;font-family:inherit;outline:none;background:white;box-sizing:border-box">
-          <option>Principal</option>
-          <option>Admin</option>
-          <option>Teacher</option>
+          <option>Principal</option><option>Admin</option><option>Teacher</option>
         </select>
       </div>
       <button onclick="alert('Invite sent! (demo)')" style="background:#7c3aed;color:white;border:none;border-radius:10px;padding:11px 24px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;width:100%">Send Invite ✉️</button>
     </div>`);
 
   // ── Assemble ─────────────────────────────────────────────
-  const bodyMap = {
-    overview: overviewTab, schools: schoolsTab, teachers: teachersTab,
-    roster: rosterTab, spark: sparkTab, assessments: assessmentsTab, invite: inviteTab,
-  };
-  const body = bodyMap[tab] || overviewTab;
-
-  return topBar + body;
+  const bodyMap = { overview:overviewTab, schools:schoolsTab, teachers:teachersTab, roster:rosterTab, spark:sparkTab, assessments:assessmentsTab, invite:inviteTab };
+  return topBar + (bodyMap[tab] || overviewTab);
 };
 
 
