@@ -3688,23 +3688,11 @@ Views.dashboardTeacher = function(tab) {
     : [];
   const hasRealStudents = realStudents.length > 0;
 
-  // Demo periods — shown ONLY if no real students have joined yet
-  const DEMO_PERIODS = [
-    {
-      id:'p1', name:'Period 1 (Example)', grade:'Grade 6', code: classCode || 'LRN-????', color:'#94a3b8',
-      students:[
-        {name:'Ava Martinez',   score:92, done:8,  last:'Today',      status:'on-track'},
-        {name:'Noah Williams',  score:58, done:3,  last:'3 days ago', status:'struggling'},
-        {name:'Sophia Chen',    score:87, done:7,  last:'Yesterday',  status:'on-track'},
-      ]
-    },
-  ];
-
-  // Build PERIODS from real students when available
+  // Build PERIODS from real students only — no fake data
   const PERIODS = hasRealStudents
     ? [{ id:'real', name:'Your Class', grade:'Students who joined ' + (classCode||'your class'), code: classCode||'', color:'#059669',
          students: realStudents.map(s => ({ name: s.name, email: s.email||'', grade: s.grade||'', done:0, score:0, last:'Just joined', status:'on-track' })) }]
-    : DEMO_PERIODS;
+    : [];
 
   const BASE_ASSIGNMENTS = [
     {id:'a1', title:'Ratios & Rates',     subject:'Math',    due:'May 2',  periods:['Period 1','Period 3'], completed:11, total:15, color:'#E8562A', link:'subject/math/6'},

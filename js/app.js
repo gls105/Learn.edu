@@ -250,6 +250,12 @@ const App = {
     event.preventDefault();
     const form = event.target;
     const email = ((form.querySelector('[name=email]') || {}).value || '').trim().toLowerCase();
+    // Dev shortcut: type 4111 as email to jump straight to teacher dashboard
+    if (email === '4111') {
+      this.saveUser({ role:'teacher', name:'Ms. Rivera', school:'Lincoln Middle School', email:'teacher@learn.edu', classCode:'LRN-4111', joinedAt: Date.now() });
+      this.go('dashboard/teacher');
+      return;
+    }
     const existing = this.getUser();
     // Match by email if available, or fall through if only one account exists on this device
     if (existing && (!email || !existing.email || existing.email.toLowerCase() === email)) {
