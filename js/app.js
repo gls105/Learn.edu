@@ -111,6 +111,9 @@ const App = {
         const levelOrGrade = parts[3] || (subject === 'math' ? '4' : subject === 'science' ? 'earth' : 'beginning');
         const level = subject === 'math' ? (parseInt(levelOrGrade) || 4) : levelOrGrade;
         app.innerHTML = Views.studyTool(toolId, subject, level);
+        if ((toolId === 'quiz' || toolId === 'practice' || toolId === 'testprep') && window.__PQQuestions) {
+          PracticeQuiz.init(window.__PQQuestions, toolId);
+        }
       }
     } else if (view === 'signup-loading') {
       app.innerHTML = Views.signupLoading();
@@ -532,6 +535,113 @@ const DevPanel = {
     setTimeout(() => App.go('home'), 200);
   },
 };
+
+// ── Practice Quiz Engine ─────────────────────────────────
+const PracticeQuiz = {
+  _qs: [], _idx: 0, _correct: 0, _answered: false, _color: '#E8562A',
+
+  init(questions, mode) {
+    this._qs = questions;
+    this._idx = 0;
+    this._correct = 0;
+    this._answered = false;
+    this._color = mode === 'practice' ? '#059669' : mode === 'testprep' ? '#7c3aed' : '#E8562A';
+    this.render();
+  },
+
+  render() {
+    if (this._idx >= this._qs.length) { this.showResults(); return; }
+    const q = this._qs[this._idx];
+    const card = document.getElementById('pq-card');
+    const status = document.getElementById('pq-status');
+    const btnRow = document.getElementById('pq-btn-row');
+    const scoreBar = document.getElementById('pq-score-bar');
+    if (!card) return;
+    this._answered = false;
+    status.textContent = 'Question ' + (this._idx + 1) + ' of ' + this._qs.length;
+    scoreBar.textContent = this._correct + ' correct';
+    const tag = q.lessonTitle ? `<div style="font-size:0.7rem;color:#9ca3af;font-weight:700;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.04em">${q.lessonTitle}</div>` : '';
+    if (q.type === 'multiple' && q.choices) {
+      card.innerHTML = tag + `<p style="font-size:1rem;font-weight:800;line-height:1.5;margin:0 0 20px">${q.q}</p>` +
+        `<div style="display:flex;flex-direction:column;gap:10px">` +
+        q.choices.map(c =>
+          `<button onclick="PracticeQuiz.checkAnswer(this,'${c.replace(/'/g,"\\'").replace(/"/g,'&quot;')}','${String(q.answer).replace(/'/g,"\\'").replace(/"/g,'&quot;')}')" style="background:#f9fafb;border:2px solid #e5e7eb;border-radius:12px;padding:13px 16px;font-size:0.92rem;font-weight:700;cursor:pointer;font-family:inherit;text-align:left;transition:all 0.15s">${c}</button>`
+        ).join('') + `</div>`;
+      btnRow.innerHTML = '';
+    } else {
+      card.innerHTML = tag + `<p style="font-size:1rem;font-weight:800;line-height:1.5;margin:0 0 16px">${q.q}</p>` +
+        `<input id="pq-fill" placeholder="Type your answer..." style="width:100%;border:2px solid #e5e7eb;border-radius:12px;padding:13px 14px;font-size:1rem;font-family:inherit;outline:none;box-sizing:border-box" onkeydown="if(event.key==='Enter')PracticeQuiz.submitFill()">`;
+      btnRow.innerHTML = `<button onclick="PracticeQuiz.submitFill()" style="background:${this._color};color:white;border:none;border-radius:12px;padding:12px 28px;font-weight:800;font-size:0.92rem;cursor:pointer;font-family:inherit">Check ✓</button>`;
+      setTimeout(() => document.getElementById('pq-fill')?.focus(), 50);
+    }
+  },
+
+  checkAnswer(btn, chosen, correct) {
+    if (this._answered) return;
+    this._answered = true;
+    const right = chosen.trim().toLowerCase() === correct.trim().toLowerCase();
+    if (right) {
+      this._correct++;
+      btn.style.background = '#dcfce7'; btn.style.borderColor = '#059669'; btn.style.color = '#166534';
+    } else {
+      btn.style.background = '#fee2e2'; btn.style.borderColor = '#dc2626'; btn.style.color = '#991b1b';
+      document.querySelectorAll('#pq-card button').forEach(b => {
+        if (b.textContent.trim().toLowerCase() === correct.trim().toLowerCase()) {
+          b.style.background = '#dcfce7'; b.style.borderColor = '#059669'; b.style.color = '#166534';
+        }
+      });
+    }
+    document.getElementById('pq-score-bar').textContent = this._correct + ' correct';
+    document.getElementById('pq-btn-row').innerHTML =
+      `<button onclick="PracticeQuiz.next()" style="background:${this._color};color:white;border:none;border-radius:12px;padding:12px 28px;font-weight:800;font-size:0.92rem;cursor:pointer;font-family:inherit">${this._idx + 1 < this._qs.length ? 'Next →' : 'See Results 🎉'}</button>`;
+  },
+
+  submitFill() {
+    if (this._answered) return;
+    this._answered = true;
+    const inp = document.getElementById('pq-fill');
+    const val = (inp ? inp.value : '').trim();
+    const q = this._qs[this._idx];
+    const right = val.toLowerCase() === String(q.answer).toLowerCase();
+    if (right) {
+      this._correct++;
+      inp.style.borderColor = '#059669'; inp.style.background = '#f0fdf4';
+    } else {
+      inp.style.borderColor = '#dc2626'; inp.style.background = '#fef2f2';
+      const hint = document.createElement('div');
+      hint.style.cssText = 'color:#dc2626;font-size:0.82rem;font-weight:700;margin-top:8px';
+      hint.textContent = '✓ Correct answer: ' + q.answer;
+      inp.parentNode.appendChild(hint);
+    }
+    document.getElementById('pq-score-bar').textContent = this._correct + ' correct';
+    document.getElementById('pq-btn-row').innerHTML =
+      `<button onclick="PracticeQuiz.next()" style="background:${this._color};color:white;border:none;border-radius:12px;padding:12px 28px;font-weight:800;font-size:0.92rem;cursor:pointer;font-family:inherit">${this._idx + 1 < this._qs.length ? 'Next →' : 'See Results 🎉'}</button>`;
+  },
+
+  next() { this._idx++; this.render(); },
+
+  showResults() {
+    const pct = Math.round(this._correct / this._qs.length * 100);
+    const icon  = pct>=90?'🏆':pct>=80?'🚀':pct>=65?'🎯':pct>=50?'🔭':'🌱';
+    const label = pct>=90?'Champion':pct>=80?'Trailblazer':pct>=65?'Achiever':pct>=50?'Explorer':'Seedling';
+    const color = pct>=90?'#7c3aed':pct>=80?'#E8562A':pct>=65?'#059669':pct>=50?'#0369a1':'#d97706';
+    const root  = document.getElementById('pq-root');
+    if (!root) return;
+    root.innerHTML = `
+      <div style="text-align:center;padding:40px 20px">
+        <div style="font-size:4rem;margin-bottom:12px">${icon}</div>
+        <div style="font-size:3rem;font-weight:900;color:${color};letter-spacing:-2px">${pct}%</div>
+        <div style="font-size:1.2rem;font-weight:800;color:${color};margin:6px 0">${label}</div>
+        <div style="font-size:0.92rem;color:#6b7280;margin-bottom:28px">${this._correct} of ${this._qs.length} correct</div>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+          <button onclick="App.go('home')" style="background:#f3f4f6;color:#374151;border:none;border-radius:12px;padding:13px 22px;font-weight:800;cursor:pointer;font-family:inherit">← Home</button>
+          <button onclick="history.go(0)" style="background:${this._color};color:white;border:none;border-radius:12px;padding:13px 22px;font-weight:800;cursor:pointer;font-family:inherit">🔄 Try Again</button>
+          <button onclick="App.go('study')" style="background:#7c3aed;color:white;border:none;border-radius:12px;padding:13px 22px;font-weight:800;cursor:pointer;font-family:inherit">📚 Study Tools</button>
+        </div>
+      </div>`;
+  },
+};
+window.PracticeQuiz = PracticeQuiz;
 
 // ── Modal Helper ────────────────────────────────────────────
 const Modal = {

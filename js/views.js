@@ -2487,65 +2487,8 @@ Views.studyTool = function(toolId, subject, levelOrGrade) {
           <div id="pq-btn-row" style="display:flex;gap:10px;justify-content:center"></div>
         </div>
       `;
-      // Inline quiz engine
-      html += `<script>
-        (function() {
-          var _qs = ${JSON.stringify(shuffled)};
-          var _idx = 0, _correct = 0, _answered = false;
-          function render() {
-            if (_idx >= _qs.length) { showResults(); return; }
-            var q = _qs[_idx];
-            var card = document.getElementById('pq-card');
-            var status = document.getElementById('pq-status');
-            var btnRow = document.getElementById('pq-btn-row');
-            var scoreBar = document.getElementById('pq-score-bar');
-            _answered = false;
-            status.textContent = 'Question ' + (_idx+1) + ' of ' + _qs.length;
-            scoreBar.textContent = _correct + ' correct';
-            var lessonTag = q.lessonTitle ? '<div style="font-size:0.7rem;color:#9ca3af;font-weight:700;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.04em">' + q.lessonTitle + '</div>' : '';
-            if (q.type === 'multiple' && q.choices) {
-              card.innerHTML = lessonTag + '<p style="font-size:1rem;font-weight:800;line-height:1.5;margin-bottom:20px">' + q.q + '</p>' +
-                '<div style="display:flex;flex-direction:column;gap:10px">' +
-                q.choices.map(function(c) {
-                  return '<button id="choice-'+c.replace(/[^a-z0-9]/gi,'_')+'" onclick="checkAnswer(this,\'' + c.replace(/'/g,"\\'") + '\',\'' + String(q.answer).replace(/'/g,"\\'") + '\')" style="background:#f9fafb;border:2px solid #e5e7eb;border-radius:12px;padding:12px 16px;font-size:0.92rem;font-weight:700;cursor:pointer;font-family:inherit;text-align:left;transition:all 0.15s">' + c + '</button>';
-                }).join('') + '</div>';
-              btnRow.innerHTML = '';
-            } else {
-              card.innerHTML = lessonTag + '<p style="font-size:1rem;font-weight:800;line-height:1.5;margin-bottom:16px">' + q.q + '</p>' +
-                '<input id="pq-fill" placeholder="Your answer..." style="width:100%;border:2px solid #e5e7eb;border-radius:12px;padding:12px 14px;font-size:1rem;font-family:inherit;outline:none;box-sizing:border-box" onkeydown="if(event.key===\'Enter\')submitFill()">';
-              btnRow.innerHTML = '<button onclick="submitFill()" style="background:${modeColor};color:white;border:none;border-radius:12px;padding:12px 28px;font-weight:800;font-size:0.92rem;cursor:pointer;font-family:inherit">Check ✓</button>';
-            }
-          }
-          window.checkAnswer = function(btn, chosen, correct) {
-            if (_answered) return; _answered = true;
-            var right = chosen.trim().toLowerCase() === correct.trim().toLowerCase();
-            if (right) { _correct++; btn.style.background='#dcfce7'; btn.style.borderColor='#059669'; btn.style.color='#166534'; }
-            else { btn.style.background='#fee2e2'; btn.style.borderColor='#dc2626'; btn.style.color='#991b1b';
-              document.querySelectorAll('#pq-card button').forEach(function(b) { if (b.textContent.trim().toLowerCase()===correct.trim().toLowerCase()) { b.style.background='#dcfce7'; b.style.borderColor='#059669'; b.style.color='#166534'; } }); }
-            document.getElementById('pq-btn-row').innerHTML = '<button onclick="nextQ()" style="background:${modeColor};color:white;border:none;border-radius:12px;padding:12px 28px;font-weight:800;font-size:0.92rem;cursor:pointer;font-family:inherit">' + (_idx+1<_qs.length?'Next →':'See Results') + '</button>';
-          };
-          window.submitFill = function() {
-            if (_answered) return; _answered = true;
-            var inp = document.getElementById('pq-fill');
-            var val = (inp ? inp.value : '').trim();
-            var q = _qs[_idx];
-            var right = val.toLowerCase() === String(q.answer).toLowerCase();
-            if (right) { _correct++; inp.style.borderColor='#059669'; inp.style.background='#dcfce7'; }
-            else { inp.style.borderColor='#dc2626'; inp.style.background='#fee2e2';
-              var hint = document.createElement('div'); hint.style.cssText='color:#dc2626;font-size:0.82rem;font-weight:700;margin-top:8px'; hint.textContent='Correct answer: ' + q.answer; inp.parentNode.appendChild(hint); }
-            document.getElementById('pq-btn-row').innerHTML = '<button onclick="nextQ()" style="background:${modeColor};color:white;border:none;border-radius:12px;padding:12px 28px;font-weight:800;font-size:0.92rem;cursor:pointer;font-family:inherit">' + (_idx+1<_qs.length?'Next →':'See Results') + '</button>';
-          };
-          window.nextQ = function() { _idx++; render(); };
-          function showResults() {
-            var pct = Math.round(_correct/_qs.length*100);
-            var lvlIcon = pct>=90?'🏆':pct>=80?'🚀':pct>=65?'🎯':pct>=50?'🔭':'🌱';
-            var lvlLabel = pct>=90?'Champion':pct>=80?'Trailblazer':pct>=65?'Achiever':pct>=50?'Explorer':'Seedling';
-            var lvlColor = pct>=90?'#7c3aed':pct>=80?'#E8562A':pct>=65?'#059669':pct>=50?'#0369a1':'#d97706';
-            document.getElementById('pq-root').innerHTML = '<div style="text-align:center;padding:20px 0"><div style="font-size:3rem;margin-bottom:8px">' + lvlIcon + '</div><div style="font-size:2.5rem;font-weight:900;color:' + lvlColor + ';letter-spacing:-1px">' + pct + '%</div><div style="font-size:1.1rem;font-weight:800;color:' + lvlColor + ';margin-top:4px">' + lvlLabel + '</div><div style="font-size:0.88rem;color:#6b7280;margin:10px 0 24px">' + _correct + ' of ' + _qs.length + ' correct</div><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button onclick="App.go(\'home\')" style="background:#f3f4f6;color:#374151;border:none;border-radius:12px;padding:12px 20px;font-weight:800;cursor:pointer;font-family:inherit">← Home</button><button onclick="location.reload()" style="background:${modeColor};color:white;border:none;border-radius:12px;padding:12px 20px;font-weight:800;cursor:pointer;font-family:inherit">🔄 Try Again</button></div></div>';
-          }
-          render();
-        })();
-      <\/script>`;
+      // Store questions for PracticeQuiz engine (inline scripts don't run in innerHTML)
+      window.__PQQuestions = shuffled;
     }
   } else if (toolId === 'realworld') {
     const rwCards = REAL_WORLD.filter(rw => rw.subject === subject);
