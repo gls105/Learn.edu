@@ -160,6 +160,9 @@ const App = {
     } else if (view === 'roadmap') {
       app.innerHTML = Views.roadmap();
 
+    } else if (view === 'roster-import') {
+      app.innerHTML = Views.rosterImport();
+
     } else {
       app.innerHTML = Views.notFound();
     }
@@ -215,11 +218,24 @@ const App = {
       user.joinedClassCode = data.joinCode.trim().toUpperCase();
     }
     this.saveUser(user);
-    // Register student in the shared roster so teachers can see them
+    // Register student in the shared all-students list and tick off roster
     if (role === 'student') {
       const all = JSON.parse(localStorage.getItem('learnedu-all-students') || '[]');
       all.push({ name: user.name, email: user.email, grade: user.grade, joinedClassCode: user.joinedClassCode || null, joinedAt: Date.now() });
       localStorage.setItem('learnedu-all-students', JSON.stringify(all));
+      // Tick off roster entry if name matches
+      if (user.joinedClassCode) {
+        const rKey = 'learnedu-roster-' + user.joinedClassCode;
+        const roster = JSON.parse(localStorage.getItem(rKey) || '[]');
+        const normalize = s => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+        const matched = roster.find(r => normalize(r.name) === normalize(user.name) && r.status === 'pending');
+        if (matched) {
+          matched.status = 'joined';
+          matched.joinedAt = Date.now();
+          matched.studentEmail = user.email || null;
+          localStorage.setItem(rKey, JSON.stringify(roster));
+        }
+      }
     }
     const dest = role === 'student'
       ? 'home'
@@ -270,6 +286,58 @@ const App = {
     if (!u.classCode) u.classCode = this.generateClassCode(u.name || '', u.school || '');
     this.saveUser(u);
     this.go('checkout-success');
+  },
+
+  // ── Roster Import ─────────────────────────────────────
+  parseRosterText(text) {
+    return text.split(/[\n,;]+/)
+      .map(s => s.trim().replace(/^["']|["']$/g, ''))
+      .filter(s => s.length > 2 && s.length < 60);
+  },
+
+  saveRoster(names) {
+    const u = this.getUser();
+    if (!u || !u.classCode) return;
+    const existing = JSON.parse(localStorage.getItem('learnedu-roster-' + u.classCode) || '[]');
+    const existingNames = new Set(existing.map(r => r.name.toLowerCase()));
+    const newEntries = names
+      .filter(n => !existingNames.has(n.toLowerCase()))
+      .map(n => ({ name: n, status: 'pending', joinedAt: null, studentEmail: null }));
+    const roster = [...existing, ...newEntries];
+    localStorage.setItem('learnedu-roster-' + u.classCode, JSON.stringify(roster));
+    return roster;
+  },
+
+  getRoster(classCode) {
+    return JSON.parse(localStorage.getItem('learnedu-roster-' + classCode) || '[]');
+  },
+
+  importRosterSubmit(event) {
+    event.preventDefault();
+    const textarea = document.getElementById('roster-input');
+    const text = (textarea && textarea.value) || '';
+    const names = this.parseRosterText(text);
+    if (names.length === 0) {
+      alert('No names found. Paste one name per line.');
+      return;
+    }
+    this.saveRoster(names);
+    this.go('dashboard/teacher/roster');
+  },
+
+  handleRosterCSV(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target.result;
+      const names = this.parseRosterText(text);
+      const ta = document.getElementById('roster-input');
+      if (ta) ta.value = names.join('\n');
+      // Switch to paste tab
+      document.getElementById('roster-tab-paste') && document.getElementById('roster-tab-paste').click();
+    };
+    reader.readAsText(file);
   },
 
   joinClass(event) {

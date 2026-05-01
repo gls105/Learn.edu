@@ -3739,22 +3739,23 @@ Views.dashboardTeacher = function(tab) {
       <div style="max-width:1280px;margin:0 auto;padding:0 28px">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0 10px">
           <div>
-            <div style="font-size:0.68rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.07em">Learn.edu Teacher Portal</div>
-            <h1 style="font-size:1.5rem;font-weight:900;color:#111;letter-spacing:-0.5px;margin-top:1px">Welcome, ${firstName}</h1>
+            <div style="font-size:0.68rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.07em">Learn.edu Teacher Portal${user && user.school ? ' · ' + user.school : ''}</div>
+            <h1 style="font-size:1.5rem;font-weight:900;color:#111;letter-spacing:-0.5px;margin-top:1px">Good morning, ${firstName} 👋</h1>
           </div>
           <div style="display:flex;gap:7px;align-items:center">
             <button onclick="App.go('assign')" style="display:flex;align-items:center;gap:5px;background:#E8562A;color:white;border:none;border-radius:9px;padding:8px 14px;font-weight:800;font-size:0.8rem;cursor:pointer;font-family:inherit">+ Assign Lesson</button>
+            <button onclick="App.go('roster-import')" style="display:flex;align-items:center;gap:5px;background:#059669;color:white;border:none;border-radius:9px;padding:8px 14px;font-weight:800;font-size:0.8rem;cursor:pointer;font-family:inherit">📋 Import Roster</button>
             <button onclick="App.go('subject/math/4')" style="background:#f3f4f6;color:#374151;border:none;border-radius:9px;padding:8px 12px;font-weight:700;font-size:0.8rem;cursor:pointer;font-family:inherit">👁️ Preview</button>
             <button onclick="App.logout()" style="background:none;border:1.5px solid #e5e7eb;color:#6b7280;border-radius:9px;padding:7px 12px;font-size:0.76rem;font-weight:700;cursor:pointer;font-family:inherit">Sign Out</button>
           </div>
         </div>
         <div style="display:flex;gap:0;border-top:1px solid #f3f4f6">
           ${[
-            {id:'dashboard',   label:'Dashboard'},
-            {id:'classes',     label:'My Classes'},
-            {id:'students',    label:'My Students'},
-            {id:'assignments', label:'Assignments'},
-            {id:'struggling',  label:'🚨 Needs Attention', badge: struggling.length},
+            {id:'dashboard',   label:'📊 Overview'},
+            {id:'roster',      label:'📋 My Roster'},
+            {id:'assignments', label:'📝 Assignments'},
+            {id:'students',    label:'📈 Progress'},
+            {id:'struggling',  label:'⚠️ Needs Help', badge: struggling.length},
           ].map(t => `
             <button onclick="App.go('dashboard/teacher/${t.id}')" style="padding:9px 16px;border:none;border-bottom:3px solid ${t.id===tab?'#E8562A':'transparent'};background:none;font-weight:${t.id===tab?'800':'600'};font-size:0.82rem;color:${t.id===tab?'#E8562A':'#6b7280'};cursor:pointer;font-family:inherit;white-space:nowrap;display:inline-flex;align-items:center;gap:4px">
               ${t.label}${t.badge?`<span style="background:#dc2626;color:white;font-size:0.62rem;font-weight:900;padding:2px 6px;border-radius:999px">${t.badge}</span>`:''}
@@ -3762,13 +3763,18 @@ Views.dashboardTeacher = function(tab) {
         </div>
       </div>
       ${classCode ? `
-      <!-- Class code banner -->
-      <div style="background:#f0fdf4;border-top:1.5px solid #dcfce7;padding:9px 28px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-        <span style="font-size:0.8rem;font-weight:700;color:#374151">📎 Your class code:</span>
-        <span style="font-size:0.95rem;font-weight:900;letter-spacing:0.1em;color:#059669;background:white;border:1.5px solid #059669;border-radius:8px;padding:3px 12px">${classCode}</span>
-        <span style="font-size:0.78rem;color:#6b7280;font-weight:500">— Share with students when they sign up</span>
-        <button onclick="navigator.clipboard && navigator.clipboard.writeText('${classCode}').then(() => this.textContent='✔ Copied!')" style="margin-left:auto;background:#059669;color:white;border:none;border-radius:7px;padding:5px 12px;font-size:0.75rem;font-weight:800;cursor:pointer;font-family:inherit">Copy 📋</button>
-        <button onclick="App.go('join-class')" style="background:#e0f2fe;color:#0369a1;border:none;border-radius:7px;padding:5px 12px;font-size:0.75rem;font-weight:800;cursor:pointer;font-family:inherit">Share Join Link →</button>
+      <!-- Class code action banner -->
+      <div style="background:linear-gradient(90deg,#fff3ef,#f0fdf4);border-top:1.5px solid #e5e7eb;padding:9px 28px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px;background:white;border:1.5px solid #059669;border-radius:10px;padding:5px 14px">
+          <span style="font-size:0.72rem;font-weight:700;color:#6b7280">Class Code</span>
+          <span style="font-size:1rem;font-weight:900;letter-spacing:0.12em;color:#059669">${classCode}</span>
+          <button onclick="navigator.clipboard&&navigator.clipboard.writeText('${classCode}').then(()=>this.textContent='✔ Copied!').catch(()=>{})" style="background:#059669;color:white;border:none;border-radius:5px;padding:2px 8px;font-size:0.68rem;font-weight:800;cursor:pointer;font-family:inherit">Copy</button>
+        </div>
+        <span style="font-size:0.75rem;color:#6b7280;font-weight:600">Share with students — they enter it when signing up at learn-edu.pages.dev</span>
+        <div style="margin-left:auto;display:flex;gap:7px">
+          <button onclick="App.go('roster-import')" style="background:#059669;color:white;border:none;border-radius:7px;padding:6px 13px;font-size:0.75rem;font-weight:800;cursor:pointer;font-family:inherit">📋 Import Roster</button>
+          <button onclick="App.go('assign')" style="background:#E8562A;color:white;border:none;border-radius:7px;padding:6px 13px;font-size:0.75rem;font-weight:800;cursor:pointer;font-family:inherit">📝 Assign Lesson</button>
+        </div>
       </div>` : `
       <div style="background:#fef9c3;border-top:1.5px solid #fde68a;padding:8px 28px;font-size:0.8rem;font-weight:700;color:#92400e">
         ⚠️ No class code yet — <a href="#checkout/Classroom" style="color:#E8562A;font-weight:900">start your free trial</a> to get a class code and invite students.
@@ -3778,43 +3784,86 @@ Views.dashboardTeacher = function(tab) {
 
   const wrap = content => `<div style="max-width:1280px;margin:0 auto;padding:24px 28px">${content}</div>`;
 
-  // ── DASHBOARD TAB ──
-  const leaderboard = [...allStudents].sort((a,b)=>b.score-a.score).slice(0,5);
+  // ── OVERVIEW TAB ──
+  const rosterSnap = classCode ? App.getRoster(classCode) : [];
+  const rosterJoinedCount = rosterSnap.filter(r=>r.status==='joined').length;
+  const rosterTotalCount = rosterSnap.length;
+  const rosterPctSnap = rosterTotalCount ? Math.round(rosterJoinedCount/rosterTotalCount*100) : 0;
+  const totalStudentsCount = allStudents.length;
+  const avgScore = totalStudentsCount ? Math.round(allStudents.reduce((s,x)=>s+(x.score||0),0)/totalStudentsCount) : 0;
+  const needsHelpCount = allStudents.filter(s=>s.status!=='on-track').length;
+
   const dashTab = wrap(`
+    <!-- Big stat cards (grade-book style) -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
+      ${[
+        {n: rosterTotalCount || totalStudentsCount || '—', label:'Total Students', sub: hasRealStudents ? 'in your class' : 'in demo roster', color:'#E8562A', icon:'🎒'},
+        {n: ASSIGNMENTS.length, label:'Assignments Active', sub: 'across all periods', color:'#059669', icon:'📝'},
+        {n: avgScore ? avgScore+'%' : '—', label:'Avg Assessment Score', sub: hasRealStudents ? 'real students' : 'demo data', color:'#0369a1', icon:'📊'},
+        {n: needsHelpCount, label:'Students Needing Help', sub: 'below 65% or inactive', color:needsHelpCount>0?'#dc2626':'#6b7280', icon:'⚠️'},
+      ].map(s=>`
+        <div style="background:white;border-radius:16px;border:1.5px solid #e5e7eb;padding:18px 20px">
+          <div style="font-size:1.3rem;margin-bottom:6px">${s.icon}</div>
+          <div style="font-size:2rem;font-weight:900;color:${s.color};letter-spacing:-1px;line-height:1">${s.n}</div>
+          <div style="font-size:0.78rem;font-weight:800;color:#374151;margin-top:4px">${s.label}</div>
+          <div style="font-size:0.7rem;color:#9ca3af;margin-top:2px">${s.sub}</div>
+        </div>`).join('')}
+    </div>
+
+    <!-- Roster progress strip -->
+    ${rosterTotalCount ? `
+    <div style="background:white;border-radius:14px;border:1.5px solid #e5e7eb;padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:14px">
+      <span style="font-size:0.85rem;font-weight:800;color:#374151;white-space:nowrap">Class sign-up progress:</span>
+      <div style="flex:1;background:#f3f4f6;border-radius:999px;height:8px;overflow:hidden"><div style="height:100%;width:${rosterPctSnap}%;background:#059669;border-radius:999px"></div></div>
+      <span style="font-size:0.85rem;font-weight:900;color:#059669;white-space:nowrap">${rosterJoinedCount}/${rosterTotalCount} joined</span>
+      <button onclick="App.go('dashboard/teacher/roster')" style="background:#f0fdf4;color:#059669;border:1.5px solid #059669;border-radius:7px;padding:5px 10px;font-size:0.72rem;font-weight:800;cursor:pointer;font-family:inherit">View Checklist →</button>
+    </div>` : `
+    <div style="background:#f0fdf4;border:1.5px solid #dcfce7;border-radius:14px;padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px">
+      <span style="font-size:0.85rem;font-weight:700;color:#374151">📋 Import your class roster to track who has and hasn't signed up yet.</span>
+      <button onclick="App.go('roster-import')" style="margin-left:auto;background:#059669;color:white;border:none;border-radius:8px;padding:6px 14px;font-size:0.78rem;font-weight:800;cursor:pointer;font-family:inherit">Import Roster →</button>
+    </div>`}
+
     <div style="display:grid;grid-template-columns:1fr 280px;gap:20px;align-items:start">
       <div>
+        <!-- Quick Actions -->
+        <div style="font-size:0.78rem;font-weight:900;text-transform:uppercase;letter-spacing:0.07em;color:#9ca3af;margin-bottom:10px">Quick Actions</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">
+          ${[
+            {icon:'📝',label:'Assign Lesson',dest:'assign',color:'#E8562A'},
+            {icon:'📋',label:'Import Roster',dest:'roster-import',color:'#059669'},
+            {icon:'📊',label:'View Progress',dest:'dashboard/teacher/students',color:'#0369a1'},
+            {icon:'📋',label:'Share Code',dest:'dashboard/teacher/roster',color:'#7c3aed'},
+          ].map(a=>`
+            <button onclick="App.go('${a.dest}')" style="background:white;border:1.5px solid ${a.color}33;border-radius:12px;padding:14px 10px;text-align:center;cursor:pointer;font-family:inherit;transition:transform 0.12s" onmouseover="this.style.borderColor='${a.color}';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='${a.color}33';this.style.transform=''">
+              <div style="font-size:1.4rem;margin-bottom:5px">${a.icon}</div>
+              <div style="font-size:0.72rem;font-weight:800;color:#374151">${a.label}</div>
+            </button>`).join('')}
+        </div>
+
+        <!-- Recent activity -->
+        <div style="font-size:0.78rem;font-weight:900;text-transform:uppercase;letter-spacing:0.07em;color:#9ca3af;margin-bottom:10px">Recent Activity</div>
         <div style="background:white;border-radius:14px;border:1.5px solid #e5e7eb;overflow:hidden;margin-bottom:18px">
-          <div style="background:#E8562A;color:white;padding:12px 18px"><h3 style="font-size:0.9rem;font-weight:900">Weekly Activity</h3></div>
-          <div style="padding:12px 18px;display:flex;gap:10px;border-bottom:1px solid #f3f4f6">
-            <select style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:7px;font-family:inherit;font-size:0.8rem;font-weight:600">
-              <option>All Periods</option>${PERIODS.map(p=>`<option>${p.name}</option>`).join('')}
-            </select>
-            <select style="padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:7px;font-family:inherit;font-size:0.8rem;font-weight:600">
-              <option>This week (Apr 28)</option><option>Last week</option>
-            </select>
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);padding:16px 18px;gap:10px">
-            ${[{n:'27',label:'Lessons completed'},{n:'79%',label:'Average score'},{n:'18',label:'Active students'}].map(s=>`
-              <div style="text-align:center;padding:14px 8px;background:#f9fafb;border-radius:10px">
-                <div style="font-size:2rem;font-weight:900;color:#111;letter-spacing:-1px">${s.n}</div>
-                <div style="font-size:0.74rem;color:#6b7280;margin-top:3px">${s.label}</div>
-              </div>`).join('')}
-          </div>
+          ${allStudents.slice(0,5).map((s,i)=>`
+            <div style="display:flex;align-items:center;gap:11px;padding:11px 16px;border-bottom:1px solid #f9fafb">
+              <div style="width:32px;height:32px;border-radius:50%;background:${s.periodColor||'#E8562A'}22;border:1.5px solid ${s.periodColor||'#E8562A'}44;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:900;color:${s.periodColor||'#E8562A'};flex-shrink:0">${(s.name||'?')[0]}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:800;font-size:0.83rem">${s.name}</div>
+                <div style="font-size:0.7rem;color:#9ca3af">${s.period} · Last active: ${s.last||'—'}</div>
+              </div>
+              <span style="font-size:0.82rem;font-weight:900;color:${(s.score||0)>=80?'#059669':(s.score||0)>=65?'#d97706':'#dc2626'}">${s.score||0}%</span>
+            </div>`).join('')}
+          <div style="padding:10px 16px;text-align:center"><button onclick="App.go('dashboard/teacher/students')" style="background:none;border:none;font-size:0.75rem;font-weight:700;color:#E8562A;cursor:pointer">See all students →</button></div>
         </div>
-        <h2 style="font-size:0.88rem;font-weight:900;color:#374151;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em">Teaching</h2>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
-          ${actionCard('#E8562A','📋','Quick Assign →','Pick a lesson, set a due date, assign to your periods.','assign')}
-          ${actionCard('#059669','📊','Assignment Report →','Track who has and hasn\'t completed their work.','dashboard/teacher/assignments')}
-          ${actionCard('#0369a1','📚','Browse Resources →','Flashcards, quiz mode, test prep and more.','study')}
-        </div>
-        <h2 style="font-size:0.88rem;font-weight:900;color:#374151;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em">Manage</h2>
+
+        <!-- Assignments -->
+        <div style="font-size:0.78rem;font-weight:900;text-transform:uppercase;letter-spacing:0.07em;color:#9ca3af;margin-bottom:10px">Active Assignments</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          ${actionCard('#7c3aed','👥','Manage Students →','View individual student activity and scores.','dashboard/teacher/students')}
-          ${actionCard('#E8562A','🏫','Manage Classes →','Add periods, share join codes, import students.','dashboard/teacher/classes')}
-          ${actionCard('#059669','👁️','Student Preview →','See what your students see on their screen.','subject/math/4')}
-          ${actionCard('#d97706','📝','PM1 Results →','View Progress Monitoring 1 benchmark results.','dashboard/admin/pm1')}
+          ${actionCard('#E8562A','📋','Assign Lesson','Pick a lesson, set a due date, assign to your class.','assign')}
+          ${actionCard('#059669','📊','Assignment Report','Track who has and hasn\'t completed their work.','dashboard/teacher/assignments')}
         </div>
       </div>
+      <div style="background:white;border-radius:14px;border:1.5px solid #e5e7eb;overflow:hidden;position:sticky;top:20px">
+        <div style="background:#111827;color:white;padding:11px 16px"><h3 style="font-size:0.85rem;font-weight:900">🏆 Top Performers</h3></div>
       <div style="background:white;border-radius:14px;border:1.5px solid #e5e7eb;overflow:hidden;position:sticky;top:20px">
         <div style="background:#111827;color:white;padding:11px 16px"><h3 style="font-size:0.85rem;font-weight:900">🏆 Leaderboard</h3></div>
         ${leaderboard.map((s,i)=>`
@@ -3951,7 +4000,81 @@ Views.dashboardTeacher = function(tab) {
       </div>`;
     }).join('')}`);
 
-  const bodyMap = {dashboard:dashTab, classes:classesTab, students:studentsTab, assignments:assignmentsTab, struggling:strugglingTab};
+  // ── ROSTER TAB ──
+  const rosterData = classCode ? App.getRoster(classCode) : [];
+  const rosterJoined  = rosterData.filter(r => r.status === 'joined');
+  const rosterPending = rosterData.filter(r => r.status === 'pending');
+  const rosterTotal   = rosterData.length;
+  const rosterPct     = rosterTotal ? Math.round(rosterJoined.length / rosterTotal * 100) : 0;
+
+  const rosterTab = wrap(`
+    <div style="max-width:780px">
+      <!-- Class code share box -->
+      <div style="background:white;border-radius:16px;border:1.5px solid #e5e7eb;padding:20px 24px;margin-bottom:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px">
+          <div>
+            <div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:#9ca3af;margin-bottom:4px">Your Class Code</div>
+            <div style="font-size:2rem;font-weight:900;letter-spacing:0.15em;color:#059669">${classCode || '—'}</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button onclick="navigator.clipboard&&navigator.clipboard.writeText('${classCode||''}').then(()=>this.textContent='✔ Copied!').catch(()=>{})" style="background:#059669;color:white;border:none;border-radius:9px;padding:8px 16px;font-weight:800;font-size:0.8rem;cursor:pointer;font-family:inherit">📋 Copy Code</button>
+            <button onclick="App.go('roster-import')" style="background:#E8562A;color:white;border:none;border-radius:9px;padding:8px 16px;font-weight:800;font-size:0.8rem;cursor:pointer;font-family:inherit">Import Roster →</button>
+          </div>
+        </div>
+        <div style="font-size:0.8rem;color:#6b7280;font-weight:500;background:#f9fafb;border-radius:8px;padding:8px 12px">
+          📣 Tell students: <em>"Go to <strong>learn-edu.pages.dev</strong>, click Sign Up, choose Student, and enter code <strong>${classCode||'—'}</strong>"</em>
+        </div>
+      </div>
+
+      ${rosterTotal === 0 ? `
+        <!-- Empty state -->
+        <div style="background:#f9fafb;border:2px dashed #e5e7eb;border-radius:16px;padding:40px 24px;text-align:center">
+          <div style="font-size:3rem;margin-bottom:12px">📋</div>
+          <h2 style="font-size:1.1rem;font-weight:900;color:#374151;margin-bottom:6px">No roster yet</h2>
+          <p style="color:#6b7280;font-size:0.88rem;font-weight:500;margin-bottom:20px">Import your class list to track who has and hasn't signed up yet.</p>
+          <button onclick="App.go('roster-import')" style="background:#059669;color:white;border:none;border-radius:12px;padding:12px 24px;font-weight:800;font-size:0.9rem;cursor:pointer;font-family:inherit">Import Roster →</button>
+        </div>` : `
+
+        <!-- Progress bar -->
+        <div style="background:white;border-radius:14px;border:1.5px solid #e5e7eb;padding:16px 20px;margin-bottom:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <span style="font-size:0.88rem;font-weight:800;color:#374151">${rosterJoined.length} of ${rosterTotal} students have joined (${rosterPct}%)</span>
+            <button onclick="App.go('roster-import')" style="background:#f3f4f6;border:none;border-radius:7px;padding:5px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;color:#374151">+ Add more names</button>
+          </div>
+          <div style="background:#f3f4f6;border-radius:999px;height:10px;overflow:hidden">
+            <div style="height:100%;width:${rosterPct}%;background:#059669;border-radius:999px;transition:width 0.4s"></div>
+          </div>
+        </div>
+
+        <!-- Joined section -->
+        ${rosterJoined.length ? `
+        <div style="margin-bottom:16px">
+          <div style="font-size:0.8rem;font-weight:900;text-transform:uppercase;letter-spacing:0.06em;color:#059669;margin-bottom:8px">✅ Joined (${rosterJoined.length})</div>
+          ${rosterJoined.map(r => `
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:white;border-radius:10px;border:1.5px solid #dcfce7;margin-bottom:6px">
+              <span style="font-size:1.2rem">✅</span>
+              <span style="font-weight:700;font-size:0.88rem;flex:1">${r.name}</span>
+              <span style="font-size:0.74rem;color:#6b7280">${r.joinedAt ? new Date(r.joinedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : ''}</span>
+              <span style="background:#dcfce7;color:#059669;font-size:0.7rem;font-weight:800;padding:2px 8px;border-radius:999px">Signed up</span>
+            </div>`).join('')}
+        </div>` : ''}
+
+        <!-- Pending section -->
+        ${rosterPending.length ? `
+        <div>
+          <div style="font-size:0.8rem;font-weight:900;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;margin-bottom:8px">⬜ Not yet signed up (${rosterPending.length})</div>
+          ${rosterPending.map(r => `
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:white;border-radius:10px;border:1.5px solid #e5e7eb;margin-bottom:6px">
+              <span style="font-size:1.2rem">⬜</span>
+              <span style="font-weight:700;font-size:0.88rem;flex:1;color:#6b7280">${r.name}</span>
+              <span style="font-size:0.74rem;color:#9ca3af">Not yet signed up</span>
+            </div>`).join('')}
+        </div>` : ''}
+      `}
+    </div>
+  `);
+
+  const bodyMap = {dashboard:dashTab, roster:rosterTab, classes:classesTab, students:studentsTab, assignments:assignmentsTab, struggling:strugglingTab};
 
   return `
     <style>
@@ -4685,4 +4808,74 @@ window.AdminPanel = {
       row.style.display = (!school || row.dataset.school === school) ? '' : 'none';
     });
   },
+};
+
+// ── Roster Import View ─────────────────────────────────────────────────────
+Views.rosterImport = function() {
+  return `
+    <nav style="background:white;border-bottom:1.5px solid #e5e7eb;padding:0 24px;height:54px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100">
+      <button onclick="App.go('dashboard/teacher/roster')" style="background:none;border:none;font-size:0.85rem;font-weight:700;color:#374151;cursor:pointer;display:flex;align-items:center;gap:5px">← Back to Roster</button>
+      <span style="font-size:1rem;font-weight:900;color:#111">Import Your Class Roster</span>
+    </nav>
+    <div style="max-width:640px;margin:0 auto;padding:32px 24px 80px">
+
+      <!-- Header -->
+      <div style="text-align:center;margin-bottom:28px">
+        <div style="font-size:2.5rem;margin-bottom:10px">📋</div>
+        <h1 style="font-size:1.8rem;font-weight:900;letter-spacing:-1px;margin-bottom:6px">Import Your Class Roster</h1>
+        <p style="color:#6b7280;font-size:0.9rem;font-weight:500">Add your students by name. When they sign up with your class code, they'll be automatically checked off.</p>
+      </div>
+
+      <!-- Tab switcher -->
+      <div style="display:flex;background:#f3f4f6;border-radius:12px;padding:3px;margin-bottom:20px">
+        <button id="roster-tab-paste" onclick="document.getElementById('roster-panel-paste').style.display='block';document.getElementById('roster-panel-csv').style.display='none';this.style.background='white';this.style.fontWeight='800';this.style.color='#111';document.getElementById('roster-tab-csv').style.background='transparent';document.getElementById('roster-tab-csv').style.fontWeight='600';document.getElementById('roster-tab-csv').style.color='#6b7280'" style="flex:1;padding:9px;border:none;border-radius:10px;background:white;font-weight:800;font-size:0.85rem;cursor:pointer;font-family:inherit;color:#111;box-shadow:0 1px 4px rgba(0,0,0,0.08)">📝 Paste Names</button>
+        <button id="roster-tab-csv" onclick="document.getElementById('roster-panel-csv').style.display='block';document.getElementById('roster-panel-paste').style.display='none';this.style.background='white';this.style.fontWeight='800';this.style.color='#111';document.getElementById('roster-tab-paste').style.background='transparent';document.getElementById('roster-tab-paste').style.fontWeight='600';document.getElementById('roster-tab-paste').style.color='#6b7280'" style="flex:1;padding:9px;border:none;border-radius:10px;background:transparent;font-weight:600;font-size:0.85rem;cursor:pointer;font-family:inherit;color:#6b7280">📂 Upload CSV</button>
+      </div>
+
+      <!-- Paste panel -->
+      <div id="roster-panel-paste">
+        <div style="background:white;border-radius:20px;padding:24px;box-shadow:0 4px 20px rgba(0,0,0,0.07);margin-bottom:16px">
+          <label style="display:block;font-size:0.85rem;font-weight:800;color:#374151;margin-bottom:8px">One name per line:</label>
+          <textarea id="roster-input" placeholder="e.g.
+Alex Johnson
+Maria Garcia
+Noah Williams
+Sofia Ramirez
+Ethan Brown" oninput="App._previewRoster(this.value)" style="width:100%;height:200px;padding:14px;border:2px solid #e5e7eb;border-radius:12px;font-size:0.9rem;font-family:inherit;box-sizing:border-box;resize:vertical;outline:none;line-height:1.6" onfocus="this.style.borderColor='#059669'" onblur="this.style.borderColor='#e5e7eb'"></textarea>
+          <div id="roster-preview" style="margin-top:12px;min-height:24px"></div>
+        </div>
+        <form onsubmit="App.importRosterSubmit(event)">
+          <button type="submit" style="width:100%;background:#059669;color:white;border:none;border-radius:14px;padding:16px;font-size:1rem;font-weight:900;cursor:pointer;font-family:inherit">Save Roster & Go to Checklist →</button>
+        </form>
+      </div>
+
+      <!-- CSV panel -->
+      <div id="roster-panel-csv" style="display:none">
+        <div style="background:white;border-radius:20px;padding:28px;box-shadow:0 4px 20px rgba(0,0,0,0.07);text-align:center">
+          <div style="font-size:2rem;margin-bottom:10px">📂</div>
+          <p style="color:#374151;font-weight:600;font-size:0.9rem;margin-bottom:6px">Upload a spreadsheet or CSV file</p>
+          <p style="color:#6b7280;font-size:0.8rem;margin-bottom:18px">The first column will be read as student names. Works with Google Sheets exports, Excel, or any CSV.</p>
+          <label style="background:#059669;color:white;border-radius:12px;padding:12px 24px;font-weight:800;font-size:0.9rem;cursor:pointer;display:inline-block">
+            Choose File
+            <input type="file" accept=".csv,.xlsx,.txt" onchange="App.handleRosterCSV(this)" style="display:none">
+          </label>
+          <p style="margin-top:14px;font-size:0.75rem;color:#9ca3af">After upload, names will appear in the Paste tab for review before saving.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <script>
+    App._previewRoster = function(text) {
+      const names = App.parseRosterText(text);
+      const el = document.getElementById('roster-preview');
+      if (!el) return;
+      if (!names.length) { el.innerHTML = ''; return; }
+      el.innerHTML = '<div style="font-size:0.78rem;font-weight:700;color:#374151;margin-bottom:8px">Preview — ' + names.length + ' student' + (names.length!==1?'s':'') + ' found:</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
+        names.slice(0,40).map(n => '<span style="background:#f0fdf4;border:1.5px solid #059669;color:#059669;border-radius:999px;padding:3px 10px;font-size:0.78rem;font-weight:700">' + n + '</span>').join('') +
+        (names.length > 40 ? '<span style="color:#9ca3af;font-size:0.78rem;align-self:center">+' + (names.length-40) + ' more</span>' : '') +
+        '</div>';
+    };
+    </script>`;
 };
