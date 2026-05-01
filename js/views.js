@@ -902,52 +902,59 @@ const Views = {
     if (step === 'questions') {
       const Q = {
         student: [
-          { id:'name',      label:"What's your name?",                            type:'text',   placeholder:'e.g. Alex' },
-          { id:'grade',     label:'What grade are you in?',                        type:'select', options:['Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9'] },
-          { id:'schooltype',label:'Are you from a school/district or homeschooled?', type:'select', options:['From a school or district','Homeschooled'] },
-          { id:'weak',      label:'Which subject do you find hardest?',            type:'select', options:['Math','Science','Spanish','All about the same'] },
-          { id:'goal',      label:'What is your learning goal?',                  type:'select', options:['Improve my grades','Test prep (big exam coming)','Learn for fun','Get ahead'] },
+          { id:'name',     label:"What's your name?",                           type:'text',   placeholder:'e.g. Alex' },
+          { id:'email',    label:'Your email address',                           type:'email',  placeholder:'e.g. alex@school.com' },
+          { id:'grade',    label:'What grade are you in?',                       type:'select', options:['Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9'] },
+          { id:'weak',     label:'Which subject do you find hardest?',           type:'select', options:['Math','Science','Spanish','All about the same'] },
+          { id:'goal',     label:'What is your learning goal?',                 type:'select', options:['Improve my grades','Test prep (big exam coming)','Learn for fun','Get ahead'] },
+          { id:'joinCode', label:'Class code (optional — ask your teacher)',     type:'text',   placeholder:'e.g. LRN-4829', required: false },
         ],
         teacher: [
           { id:'name',    label:"Your name?",                      type:'text',   placeholder:'e.g. Ms. Rivera' },
+          { id:'email',   label:'Your email address',              type:'email',  placeholder:'e.g. teacher@school.com' },
           { id:'school',  label:'School name',                     type:'text',   placeholder:'e.g. Lincoln Middle School' },
           { id:'grades',  label:'What grades do you teach?',       type:'select', options:['Grades 4-5','Grades 6-7','Grades 8-9','Mixed'] },
           { id:'subjects',label:'What subjects?',                  type:'select', options:['Math','Science','Spanish','Multiple subjects'] },
         ],
         parent: [
-          { id:'schooltype', label:'Is your child in a traditional school or homeschooled?', type:'select', options:['Traditional school (public/private)','Homeschooled','Homeschool co-op / hybrid','Not yet enrolled'] },
-          { id:'name',    label:"Your name?",                      type:'text',   placeholder:'e.g. Maria' },
-          { id:'child',   label:"Child's name?",                   type:'text',   placeholder:'e.g. Sofia' },
-          { id:'grade',   label:"Child's grade or level?",         type:'select', options:['Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Homeschool - Elementary','Homeschool - Middle','Homeschool - High School'] },
-          { id:'concern', label:'Which subject are you most focused on?', type:'select', options:['Math','Science','Spanish','All subjects'] },
+          { id:'name',       label:"Your name?",                      type:'text',   placeholder:'e.g. Maria' },
+          { id:'email',      label:'Your email address',              type:'email',  placeholder:'e.g. parent@email.com' },
+          { id:'child',      label:"Child's name?",                   type:'text',   placeholder:'e.g. Sofia' },
+          { id:'grade',      label:"Child's grade or level?",         type:'select', options:['Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Homeschool - Elementary','Homeschool - Middle','Homeschool - High School'] },
+          { id:'schooltype', label:'Traditional school or homeschooled?', type:'select', options:['Traditional school (public/private)','Homeschooled','Homeschool co-op / hybrid','Not yet enrolled'] },
+          { id:'concern',    label:'Which subject are you most focused on?', type:'select', options:['Math','Science','Spanish','All subjects'] },
         ],
         district: [
-          { id:'name',    label:"Your name?",                      type:'text',   placeholder:'e.g. Dr. Johnson' },
-          { id:'district',label:'District name',                   type:'text',   placeholder:'e.g. Miami-Dade County Schools' },
-          { id:'schools', label:'Number of schools in district',   type:'select', options:['1-10','11-50','51-200','200+'] },
-          { id:'grades',  label:'Grades covered',                  type:'select', options:['Elementary (K-5)','Middle (6-8)','High (9-12)','All grades'] },
+          { id:'name',     label:"Your name?",                      type:'text',   placeholder:'e.g. Dr. Johnson' },
+          { id:'email',    label:'Your email address',              type:'email',  placeholder:'e.g. admin@district.edu' },
+          { id:'district', label:'District name',                   type:'text',   placeholder:'e.g. Miami-Dade County Schools' },
+          { id:'schools',  label:'Number of schools in district',   type:'select', options:['1-10','11-50','51-200','200+'] },
+          { id:'grades',   label:'Grades covered',                  type:'select', options:['Elementary (K-5)','Middle (6-8)','High (9-12)','All grades'] },
         ],
       };
       const qs = Q[role] || Q.student;
       const roleInfo = roles.find(r => r.id === role) || roles[0];
+      const selBg = `url('data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%239ca3af\' stroke-width=\'2\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' d=\'m6 9 6 6 6-6\'></path></svg>')`;
       return `
         <nav class="nav"><a class="nav-logo" href="#home">${this._logoSVG()}</a><button onclick="App.go('signup')" style="background:none;border:none;font-size:0.82rem;color:var(--muted);cursor:pointer;font-weight:600">← Back</button></nav>
         <div style="max-width:560px;margin:0 auto;padding:48px 24px 80px">
           <div style="text-align:center;margin-bottom:32px">
             <div style="font-size:2rem;margin-bottom:8px">${roleInfo.emoji}</div>
-            <h1 style="font-size:1.9rem;font-weight:900;letter-spacing:-1px;margin-bottom:6px">Tell us about yourself</h1>
+            <h1 style="font-size:1.9rem;font-weight:900;letter-spacing:-1px;margin-bottom:6px">Create your account</h1>
             <p style="color:#6b7280;font-size:0.9rem">Signing up as <strong style="color:${roleInfo.color}">${roleInfo.label}</strong></p>
           </div>
           <div style="background:white;border-radius:24px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,0.08)">
             <form onsubmit="App.completeSignup(event,'${role}')" style="display:flex;flex-direction:column;gap:20px">
-              ${qs.map((q, i) => `
-                <div>
-                  <label style="display:block;font-size:0.88rem;font-weight:800;margin-bottom:8px;color:#374151">${q.label}</label>
-                  ${q.type === 'select'
-                    ? `<select name="${q.id}" required style="width:100%;padding:12px 14px;border:2px solid #e5e7eb;border-radius:12px;font-size:0.95rem;font-family:inherit;font-weight:600;cursor:pointer;appearance:none;background:white url('data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%239ca3af\' stroke-width=\'2\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' d=\'m6 9 6 6 6-6\'></path></svg>') no-repeat right 12px center/18px">${q.options.map(o => `<option>${o}</option>`).join('')}</select>`
-                    : `<input name="${q.id}" type="text" placeholder="${q.placeholder||''}" required style="width:100%;padding:12px 14px;border:2px solid #e5e7eb;border-radius:12px;font-size:0.95rem;font-family:inherit;box-sizing:border-box" onfocus="this.style.borderColor='${roleInfo.color}'" onblur="this.style.borderColor='#e5e7eb'">`
-                  }
-                </div>`).join('')}
+              ${qs.map(q => {
+                const isOpt = q.required === false;
+                const req   = isOpt ? '' : 'required';
+                const optTxt = isOpt ? ' <span style=\"font-size:0.75rem;font-weight:500;color:#9ca3af\">(optional)</span>' : '';
+                if (q.type === 'select') {
+                  return '<div><label style=\"display:block;font-size:0.88rem;font-weight:800;margin-bottom:8px;color:#374151\">' + q.label + '</label><select name=\"' + q.id + '\" required style=\"width:100%;padding:12px 14px;border:2px solid #e5e7eb;border-radius:12px;font-size:0.95rem;font-family:inherit;font-weight:600;cursor:pointer;appearance:none;background:white ' + selBg + ' no-repeat right 12px center/18px\">' + q.options.map(o => '<option>' + o + '</option>').join('') + '</select></div>';
+                }
+                const rc = roleInfo.color;
+                return '<div><label style="display:block;font-size:0.88rem;font-weight:800;margin-bottom:8px;color:#374151">' + q.label + optTxt + '</label><input name="' + q.id + '" type="' + (q.type||'text') + '" placeholder="' + (q.placeholder||'') + '" ' + req + ' style="width:100%;padding:12px 14px;border:2px solid #e5e7eb;border-radius:12px;font-size:0.95rem;font-family:inherit;box-sizing:border-box" onfocus="this.style.borderColor=\'' + rc + '\'" onblur="this.style.borderColor=\'#e5e7eb\'"></div>';
+              }).join('')}
               <button type="submit" style="background:${roleInfo.color};color:white;border:none;border-radius:14px;padding:16px;font-size:1rem;font-weight:900;cursor:pointer;margin-top:4px">Create My Account →</button>
             </form>
           </div>
@@ -960,12 +967,6 @@ const Views = {
   // ── Log In ────────────────────────────────────────────────────────────
   login() {
     const saved = App.getUser();
-    const quickRoles = [
-      { id:'student',  emoji:'\uD83C\uDF92', label:'Student',  color:'#E8562A' },
-      { id:'teacher',  emoji:'\uD83D\uDCCB', label:'Teacher',  color:'#059669' },
-      { id:'parent',   emoji:'\uD83C\uDFE0', label:'Parent',   color:'#0369a1' },
-      { id:'district', emoji:'\uD83C\uDFEB', label:'District', color:'#7c3aed' },
-    ];
     return `
       <nav class="nav"><a class="nav-logo" href="#home">${this._logoSVG()}</a><a href="#signup" style="font-size:0.82rem;font-weight:600;color:var(--muted);text-decoration:none">New here? Sign up free</a></nav>
       <div style="max-width:480px;margin:0 auto;padding:56px 24px 80px">
@@ -976,38 +977,29 @@ const Views = {
         </div>
 
         ${saved ? `
-          <!-- Quick re-login for returning user -->
-          <div style="background:#f0fdf4;border:2px solid #059669;border-radius:20px;padding:20px 22px;margin-bottom:20px;cursor:pointer" onclick="App.loginAsDemo('${saved.role}')">
-            <div style="font-size:0.75rem;font-weight:800;color:#059669;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em">✔ Saved Session</div>
+          <div style="background:#f0fdf4;border:2px solid #059669;border-radius:20px;padding:18px 22px;margin-bottom:20px;cursor:pointer" onclick="App.loginSubmit({preventDefault:()=>{},target:{querySelector:()=>({value:saved.email||''})}})">
+            <div style="font-size:0.72rem;font-weight:800;color:#059669;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.05em">✔ Saved Account</div>
             <div style="font-weight:900;font-size:1.05rem;margin-bottom:2px">${saved.name || 'User'}</div>
-            <div style="font-size:0.82rem;color:#6b7280">${saved.role.charAt(0).toUpperCase()+saved.role.slice(1)} · Tap to continue →</div>
+            <div style="font-size:0.82rem;color:#6b7280">${saved.email || ''} · ${saved.role ? saved.role.charAt(0).toUpperCase()+saved.role.slice(1) : ''} · Tap to continue →</div>
           </div>
-          <div style="text-align:center;color:#9ca3af;font-size:0.82rem;margin-bottom:16px;font-weight:600">―― or log in as someone else ――</div>` : ''}
+          <div style="text-align:center;color:#9ca3af;font-size:0.82rem;margin-bottom:16px;font-weight:600">―― or enter a different email ――</div>` : ''}
 
         <div style="background:white;border-radius:24px;padding:28px;box-shadow:0 4px 24px rgba(0,0,0,0.08);margin-bottom:20px">
           <form onsubmit="App.loginSubmit(event)" style="display:flex;flex-direction:column;gap:16px">
             <div>
-              <label style="display:block;font-size:0.88rem;font-weight:800;margin-bottom:7px;color:#374151">Email</label>
+              <label style="display:block;font-size:0.88rem;font-weight:800;margin-bottom:7px;color:#374151">Email address</label>
               <input name="email" type="email" placeholder="your@email.com" required style="width:100%;padding:12px 14px;border:2px solid #e5e7eb;border-radius:12px;font-size:0.95rem;font-family:inherit;box-sizing:border-box" onfocus="this.style.borderColor='#E8562A'" onblur="this.style.borderColor='#e5e7eb'">
             </div>
-            <div>
-              <label style="display:block;font-size:0.88rem;font-weight:800;margin-bottom:7px;color:#374151">Password</label>
-              <input name="password" type="password" placeholder="••••••••" required style="width:100%;padding:12px 14px;border:2px solid #e5e7eb;border-radius:12px;font-size:0.95rem;font-family:inherit;box-sizing:border-box" onfocus="this.style.borderColor='#E8562A'" onblur="this.style.borderColor='#e5e7eb'">
-            </div>
-            <button type="submit" style="background:#111;color:white;border:none;border-radius:14px;padding:16px;font-size:1rem;font-weight:900;cursor:pointer">Log In</button>
+            <div id="login-error" style="display:none;background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;padding:10px 14px;color:#dc2626;font-size:0.85rem;font-weight:700">⚠️ No account found for that email — <a href="#signup" style="color:#E8562A;font-weight:900">sign up first →</a></div>
+            <button type="submit" style="background:#111;color:white;border:none;border-radius:14px;padding:16px;font-size:1rem;font-weight:900;cursor:pointer">Continue →</button>
           </form>
         </div>
 
-        <p style="text-align:center;font-size:0.82rem;color:#9ca3af;font-weight:600;margin-bottom:16px">Or jump in as a demo user</p>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          ${quickRoles.map(r => `
-            <button onclick="App.loginAsDemo('${r.id}')" style="background:white;border:2px solid #e5e7eb;border-radius:14px;padding:14px 10px;cursor:pointer;font-family:inherit;font-weight:700;font-size:0.85rem;display:flex;align-items:center;gap:8px;transition:all 0.12s" onmouseover="this.style.borderColor='${r.color}'" onmouseout="this.style.borderColor='#e5e7eb'">
-              <span style="font-size:1.3rem">${r.emoji}</span> ${r.label}
-            </button>`).join('')}
+        <div style="text-align:center;margin-top:16px">
+          <p style="font-size:0.78rem;color:#9ca3af">Just want to explore? <a href="#home" style="color:#E8562A;font-weight:700">Browse as guest →</a></p>
         </div>
       </div>`;
   },
-
   // ── Access Code Gate ─────────────────────────────────────────────────────
   accessCode(role) {
     const meta = {
@@ -1076,8 +1068,8 @@ const Views = {
         bg: '#f0f9ff',
         border: '#bae6fd',
         badge: null,
-        cta: 'Get Notified',
-        ctaAction: "alert('Coming soon! We will notify you when Learn Light launches.')",
+        cta: 'Start Free Trial',
+        ctaAction: "App.go('teacher-onboard/1')",
         features: [
           '~85% of all lessons (early access to new content)',
           'Progress streaks & XP system',
@@ -1096,8 +1088,8 @@ const Views = {
         bg: '#fff3ef',
         border: '#fddacf',
         badge: 'Most Popular',
-        cta: 'Get Notified',
-        ctaAction: "alert('Coming soon! We will notify you when Learn Pro launches.')",
+        cta: 'Start Free Trial',
+        ctaAction: "App.go('teacher-onboard/1')",
         features: [
           '35 lessons per course',
           'Teacher class management',
@@ -1117,8 +1109,8 @@ const Views = {
         bg: '#f5f3ff',
         border: '#ddd6fe',
         badge: 'Districts & Schools',
-        cta: 'Contact Us',
-        ctaAction: "alert('Contact us at hello@learn.edu for district pricing.')",
+        cta: 'Get District Access',
+        ctaAction: "App.go('signup/questions/district')",
         features: [
           'Unlimited lessons',
           'District admin dashboard',
@@ -1190,7 +1182,7 @@ const Views = {
           <div style="font-size:2.2rem;margin-bottom:10px">🎓</div>
           <h1 style="font-size:2.4rem;font-weight:900;letter-spacing:-1.5px;margin-bottom:8px">Simple, honest pricing</h1>
           <p style="color:#6b7280;font-size:1rem;font-weight:500">Start free forever. Upgrade when your students are ready for more.</p>
-          <div style="display:inline-block;background:#fef3c7;border:1.5px solid #fcd34d;border-radius:999px;padding:6px 16px;font-size:0.8rem;font-weight:800;color:#92400e;margin-top:8px">⚡ Paid plans launching soon — be the first to know</div>
+          <div style="display:inline-block;background:#dcfce7;border:1.5px solid #86efac;border-radius:999px;padding:6px 16px;font-size:0.8rem;font-weight:800;color:#166534;margin-top:8px">🎉 14-day free trial on all paid plans · No credit card required</div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:8px">
           ${cards}
@@ -1802,6 +1794,112 @@ const Views = {
       </div>`;
   },
 
+
+  // ── Checkout ─────────────────────────────────────────────────────────────
+  checkout(plan) {
+    const PLANS = {
+      'Starter':     { price:'$9.99/mo',  color:'#059669', bg:'#ecfdf5', students:'Up to 30 students',   features:['All lessons','Spark assessments','Progress tracking','3 class periods'] },
+      'Classroom':   { price:'$19.99/mo', color:'#0369a1', bg:'#e0f2fe', students:'Up to 60 students',   features:['All lessons + early access','Assignment tools','Parent notifications','Progress reports','6 class periods'] },
+      'Grade Level': { price:'$34.99/mo', color:'#7c3aed', bg:'#f5f3ff', students:'Up to 120 students',  features:['PM1 & PM2 assessments','CSV student import','Priority support','Everything in Classroom','Unlimited periods'] },
+      'School':      { price:'$54.99/mo', color:'#E8562A', bg:'#fff3ef', students:'200+ students',       features:['Admin dashboard','API access','Dedicated onboarding call','SLA guarantee','Everything in Grade Level'] },
+    };
+    const p = PLANS[plan] || PLANS['Classroom'];
+    const check = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${p.color}" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`;
+    return `
+      <nav class="nav"><a class="nav-logo" href="#home">${this._logoSVG()}</a><button onclick="App.go('teacher-pricing')" style="background:none;border:none;font-size:0.82rem;color:var(--muted);cursor:pointer;font-weight:600">← Back to Plans</button></nav>
+      <div style="max-width:800px;margin:0 auto;padding:40px 24px 80px">
+        <div style="text-align:center;margin-bottom:32px">
+          <h1 style="font-size:2rem;font-weight:900;letter-spacing:-1px;margin-bottom:6px">Start your free trial</h1>
+          <p style="color:#6b7280;font-size:0.95rem;font-weight:500">14 days free · No credit card required · Cancel anytime</p>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+          <!-- Plan summary -->
+          <div style="background:${p.bg};border:2px solid ${p.color}33;border-radius:24px;padding:28px">
+            <div style="font-size:0.72rem;font-weight:800;color:${p.color};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Selected Plan</div>
+            <h2 style="font-size:1.6rem;font-weight:900;color:${p.color};margin-bottom:4px">Learn ${plan}</h2>
+            <div style="font-size:2rem;font-weight:900;letter-spacing:-1px;margin-bottom:4px">${p.price}</div>
+            <div style="font-size:0.8rem;color:#6b7280;font-weight:600;margin-bottom:20px">${p.students}</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              ${p.features.map(f => `<div style="display:flex;align-items:center;gap:8px;font-size:0.85rem;font-weight:600;color:#374151">${check} ${f}</div>`).join('')}
+            </div>
+            <div style="margin-top:20px;padding:14px;background:white;border-radius:12px;font-size:0.78rem;color:#6b7280;font-weight:600;line-height:1.5">
+              🔒 Your 14-day trial is completely free. We'll remind you before it ends — no surprise charges.
+            </div>
+          </div>
+          <!-- Form -->
+          <div style="background:white;border-radius:24px;padding:28px;box-shadow:0 4px 24px rgba(0,0,0,0.08)">
+            <h3 style="font-size:1rem;font-weight:900;margin-bottom:20px;color:#111">Tell us about your classroom</h3>
+            <form onsubmit="App.submitCheckout(event,'${plan}')" style="display:flex;flex-direction:column;gap:16px">
+              <div>
+                <label style="display:block;font-size:0.85rem;font-weight:800;margin-bottom:7px;color:#374151">Your Name</label>
+                <input name="name" type="text" placeholder="e.g. Ms. Rivera" required style="width:100%;padding:11px 14px;border:2px solid #e5e7eb;border-radius:12px;font-size:0.95rem;font-family:inherit;box-sizing:border-box" onfocus="this.style.borderColor='${p.color}'" onblur="this.style.borderColor='#e5e7eb'">
+              </div>
+              <div>
+                <label style="display:block;font-size:0.85rem;font-weight:800;margin-bottom:7px;color:#374151">Email Address</label>
+                <input name="email" type="email" placeholder="teacher@school.com" required style="width:100%;padding:11px 14px;border:2px solid #e5e7eb;border-radius:12px;font-size:0.95rem;font-family:inherit;box-sizing:border-box" onfocus="this.style.borderColor='${p.color}'" onblur="this.style.borderColor='#e5e7eb'">
+              </div>
+              <div>
+                <label style="display:block;font-size:0.85rem;font-weight:800;margin-bottom:7px;color:#374151">School Name</label>
+                <input name="school" type="text" placeholder="e.g. Lincoln Middle School" required style="width:100%;padding:11px 14px;border:2px solid #e5e7eb;border-radius:12px;font-size:0.95rem;font-family:inherit;box-sizing:border-box" onfocus="this.style.borderColor='${p.color}'" onblur="this.style.borderColor='#e5e7eb'">
+              </div>
+              <div style="background:#f9fafb;border-radius:14px;padding:16px;margin-top:4px">
+                <div style="font-size:0.8rem;font-weight:800;color:#374151;margin-bottom:4px">🎓 Start Free Trial — No Card Required</div>
+                <div style="font-size:0.75rem;color:#6b7280;font-weight:500">We'll ask for payment after your 14-day trial ends.</div>
+              </div>
+              <button type="submit" style="background:${p.color};color:white;border:none;border-radius:14px;padding:15px;font-size:1rem;font-weight:900;cursor:pointer;font-family:inherit">Activate My Free Trial →</button>
+            </form>
+          </div>
+        </div>
+      </div>`;
+  },
+
+  checkoutSuccess() {
+    const user = (typeof App !== 'undefined') ? App.getUser() : {};
+    const code = (user && user.classCode) ? user.classCode : 'LRN-????';
+    const plan = (user && user.plan) ? user.plan : 'Classroom';
+    const trialEnd = user && user.trialStarted
+      ? new Date(user.trialStarted + 14*24*60*60*1000).toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'})
+      : '14 days from now';
+    return `
+      <nav class="nav"><a class="nav-logo" href="#home">${this._logoSVG()}</a></nav>
+      <div style="max-width:600px;margin:0 auto;padding:56px 24px 80px;text-align:center">
+        <div style="font-size:4rem;margin-bottom:16px">✅</div>
+        <h1 style="font-size:2.2rem;font-weight:900;letter-spacing:-1px;margin-bottom:8px">You're in! Welcome to Learn ${plan}.</h1>
+        <p style="color:#6b7280;font-size:1rem;font-weight:500;margin-bottom:32px">Your 14-day free trial is active. No charge until <strong>${trialEnd}</strong>.</p>
+
+        <!-- Class code -->
+        <div style="background:#f0fdf4;border:2.5px solid #059669;border-radius:24px;padding:28px;margin-bottom:24px">
+          <div style="font-size:0.75rem;font-weight:800;color:#059669;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">📎 Your Class Code</div>
+          <div style="font-size:3rem;font-weight:900;letter-spacing:0.15em;color:#059669;margin-bottom:12px">${code}</div>
+          <p style="font-size:0.88rem;color:#374151;font-weight:600;margin-bottom:16px">Share this code with your students so they can join your class. Students enter it when they sign up.</p>
+          <button onclick="navigator.clipboard && navigator.clipboard.writeText('${code}').then(() => this.textContent='✔ Copied!')" style="background:#059669;color:white;border:none;border-radius:10px;padding:10px 22px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit">Copy Code 📋</button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px">
+          <button onclick="App.go('dashboard/teacher')" style="background:#111;color:white;border:none;border-radius:14px;padding:15px;font-size:0.95rem;font-weight:900;cursor:pointer;font-family:inherit">Go to Teacher Dashboard →</button>
+          <button onclick="App.go('teacher-onboard/1')" style="background:white;color:#374151;border:2px solid #e5e7eb;border-radius:14px;padding:15px;font-size:0.95rem;font-weight:700;cursor:pointer;font-family:inherit">Complete Setup</button>
+        </div>
+        <p style="font-size:0.78rem;color:#9ca3af">Questions? Reach us at <strong>hello@learn-edu.pages.dev</strong></p>
+      </div>`;
+  },
+
+  joinClass() {
+    return `
+      <nav class="nav"><a class="nav-logo" href="#home">${this._logoSVG()}</a><button onclick="App.go('home')" style="background:none;border:none;font-size:0.82rem;color:var(--muted);cursor:pointer;font-weight:600">← Home</button></nav>
+      <div style="max-width:440px;margin:0 auto;padding:72px 24px 80px;text-align:center">
+        <div style="font-size:3rem;margin-bottom:14px">🔑</div>
+        <h1 style="font-size:1.9rem;font-weight:900;letter-spacing:-1px;margin-bottom:8px">Join a Class</h1>
+        <p style="color:#6b7280;font-size:0.9rem;font-weight:500;margin-bottom:32px">Enter the class code your teacher shared with you</p>
+        <div style="background:white;border-radius:24px;padding:28px;box-shadow:0 4px 24px rgba(0,0,0,0.08)">
+          <form onsubmit="App.joinClass(event)" style="display:flex;flex-direction:column;gap:14px">
+            <input id="join-class-input" type="text" placeholder="LRN-1234" autocapitalize="characters" maxlength="8" style="width:100%;padding:16px;border:2.5px solid #e5e7eb;border-radius:14px;font-size:1.5rem;font-weight:900;letter-spacing:0.15em;text-align:center;text-transform:uppercase;box-sizing:border-box;color:#059669;font-family:inherit" onfocus="this.style.borderColor='#059669'" onblur="this.style.borderColor='#e5e7eb'">
+            <div id="join-class-error" style="display:none;color:#dc2626;font-size:0.82rem;font-weight:700;background:#fef2f2;padding:8px 12px;border-radius:8px"></div>
+            <button type="submit" style="background:#059669;color:white;border:none;border-radius:14px;padding:14px;font-size:1rem;font-weight:900;cursor:pointer;font-family:inherit">Join Class →</button>
+          </form>
+        </div>
+        <p style="margin-top:16px;font-size:0.78rem;color:#9ca3af">Ask your teacher for the LRN-XXXX code.</p>
+      </div>`;
+  },
 
   // ── Signup Loading Screen ────────────────────────────────────────────────
   signupLoading() {
@@ -3438,6 +3536,19 @@ Views.studentHome = function() {
       '</div>' +
     '</div>';
 
+  // ── Join class banner (shown to students without a class code) ──────────────
+  var joinClassBanner = '';
+  if (!user.joinedClassCode) {
+    joinClassBanner =
+      '<div style="margin:16px 32px 0;background:#f0fdf4;border:1.5px solid #059669;border-radius:16px;padding:14px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">' +
+        '<div style="flex:1">' +
+          '<div style="font-size:0.8rem;font-weight:900;color:#059669;margin-bottom:2px">🔑 Join your teacher\'s class</div>' +
+          '<div style="font-size:0.78rem;color:#374151;font-weight:500">Got a class code from your teacher? Enter it to sync with your class.</div>' +
+        '</div>' +
+        '<button onclick="App.go(\'join-class\')" style="background:#059669;color:white;border:none;border-radius:10px;padding:9px 18px;font-size:0.82rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap">Enter Class Code →</button>' +
+      '</div>';
+  }
+
   // ── Spark banner ──────────────────────────────────────────────────────────
   var sparkBanner =
     '<div style="margin:0 32px 36px;border-radius:24px;background:linear-gradient(135deg,#4f46e5,#7c3aed,#E8562A);padding:32px 40px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;color:white">' +
@@ -3516,7 +3627,7 @@ Views.studentHome = function() {
     '</div>';
 
 // ── assemble page ─────────────────────────────────────────────────────────
-  var content = nav + greetingBar;
+  var content = nav + greetingBar + joinClassBanner;
   content += '<div style="padding-top:28px">';
   // Two-column: main content + sidebar
   content += '<div style="display:flex;align-items:flex-start">';
@@ -3568,44 +3679,32 @@ Views.studentHome = function() {
 Views.dashboardTeacher = function(tab) {
   tab = tab || 'dashboard';
 
-  const PERIODS = [
+  // Load real students who joined via this teacher's class code
+  const user = (typeof App !== 'undefined') ? App.getUser() : {};
+  const classCode = user && user.classCode;
+  const allRegistered = JSON.parse(localStorage.getItem('learnedu-all-students') || '[]');
+  const realStudents = classCode
+    ? allRegistered.filter(s => s.joinedClassCode === classCode)
+    : [];
+  const hasRealStudents = realStudents.length > 0;
+
+  // Demo periods — shown ONLY if no real students have joined yet
+  const DEMO_PERIODS = [
     {
-      id:'p1', name:'Period 1', grade:'Grade 6', code:'LRN-4829', color:'#E8562A',
+      id:'p1', name:'Period 1 (Example)', grade:'Grade 6', code: classCode || 'LRN-????', color:'#94a3b8',
       students:[
         {name:'Ava Martinez',   score:92, done:8,  last:'Today',      status:'on-track'},
         {name:'Noah Williams',  score:58, done:3,  last:'3 days ago', status:'struggling'},
         {name:'Sophia Chen',    score:87, done:7,  last:'Yesterday',  status:'on-track'},
-        {name:'Liam Johnson',   score:74, done:5,  last:'Today',      status:'on-track'},
-        {name:'Emma Davis',     score:61, done:4,  last:'5 days ago', status:'at-risk'},
-        {name:'Oliver Brown',   score:95, done:9,  last:'Today',      status:'on-track'},
-        {name:'Mia Wilson',     score:83, done:6,  last:'Yesterday',  status:'on-track'},
-        {name:'Ethan Taylor',   score:69, done:4,  last:'2 days ago', status:'at-risk'},
-      ]
-    },
-    {
-      id:'p3', name:'Period 3', grade:'Grade 7', code:'LRN-7193', color:'#059669',
-      students:[
-        {name:'Isabella Moore', score:78, done:6,  last:'Today',      status:'on-track'},
-        {name:'Lucas Anderson', score:91, done:8,  last:'Today',      status:'on-track'},
-        {name:'Amelia Jackson', score:55, done:2,  last:'1 week ago', status:'struggling'},
-        {name:'Mason White',    score:82, done:7,  last:'Yesterday',  status:'on-track'},
-        {name:'Harper Harris',  score:67, done:4,  last:'3 days ago', status:'at-risk'},
-        {name:'Logan Martin',   score:88, done:7,  last:'Today',      status:'on-track'},
-        {name:'Ella Thompson',  score:73, done:5,  last:'2 days ago', status:'on-track'},
-      ]
-    },
-    {
-      id:'p5', name:'Period 5', grade:'Grade 8', code:'LRN-2847', color:'#7c3aed',
-      students:[
-        {name:'Aiden Garcia',   score:85, done:7,  last:'Today',      status:'on-track'},
-        {name:'Luna Rodriguez', score:48, done:2,  last:'1 week ago', status:'struggling'},
-        {name:'Jackson Lee',    score:90, done:8,  last:'Yesterday',  status:'on-track'},
-        {name:'Lily Walker',    score:76, done:5,  last:'Today',      status:'on-track'},
-        {name:'Sebastian Hall', score:63, done:4,  last:'4 days ago', status:'at-risk'},
-        {name:'Camila Young',   score:88, done:7,  last:'Today',      status:'on-track'},
       ]
     },
   ];
+
+  // Build PERIODS from real students when available
+  const PERIODS = hasRealStudents
+    ? [{ id:'real', name:'Your Class', grade:'Students who joined ' + (classCode||'your class'), code: classCode||'', color:'#059669',
+         students: realStudents.map(s => ({ name: s.name, email: s.email||'', grade: s.grade||'', done:0, score:0, last:'Just joined', status:'on-track' })) }]
+    : DEMO_PERIODS;
 
   const BASE_ASSIGNMENTS = [
     {id:'a1', title:'Ratios & Rates',     subject:'Math',    due:'May 2',  periods:['Period 1','Period 3'], completed:11, total:15, color:'#E8562A', link:'subject/math/6'},
@@ -3619,9 +3718,8 @@ Views.dashboardTeacher = function(tab) {
 
   const allStudents = PERIODS.flatMap(p => p.students.map(s => ({...s, period:p.name, periodColor:p.color})));
   const struggling  = allStudents.filter(s => s.status !== 'on-track');
-  const user = (typeof App !== 'undefined') ? App.getUser() : {};
   const teacherName = (user && user.name) ? user.name : 'Teacher';
-  const firstName   = teacherName.split(' ').pop();
+  const firstName   = teacherName.split(' ')[0] || teacherName;
 
   const actionCard = (color, icon, title, desc, dest) =>
     `<div onclick="App.go('${dest}')" style="background:white;border-radius:14px;border:1.5px solid #e5e7eb;overflow:hidden;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(0,0,0,0.10)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
@@ -3663,7 +3761,20 @@ Views.dashboardTeacher = function(tab) {
             </button>`).join('')}
         </div>
       </div>
-    </div>`;
+      ${classCode ? `
+      <!-- Class code banner -->
+      <div style="background:#f0fdf4;border-top:1.5px solid #dcfce7;padding:9px 28px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span style="font-size:0.8rem;font-weight:700;color:#374151">📎 Your class code:</span>
+        <span style="font-size:0.95rem;font-weight:900;letter-spacing:0.1em;color:#059669;background:white;border:1.5px solid #059669;border-radius:8px;padding:3px 12px">${classCode}</span>
+        <span style="font-size:0.78rem;color:#6b7280;font-weight:500">— Share with students when they sign up</span>
+        <button onclick="navigator.clipboard && navigator.clipboard.writeText('${classCode}').then(() => this.textContent='✔ Copied!')" style="margin-left:auto;background:#059669;color:white;border:none;border-radius:7px;padding:5px 12px;font-size:0.75rem;font-weight:800;cursor:pointer;font-family:inherit">Copy 📋</button>
+        <button onclick="App.go('join-class')" style="background:#e0f2fe;color:#0369a1;border:none;border-radius:7px;padding:5px 12px;font-size:0.75rem;font-weight:800;cursor:pointer;font-family:inherit">Share Join Link →</button>
+      </div>` : `
+      <div style="background:#fef9c3;border-top:1.5px solid #fde68a;padding:8px 28px;font-size:0.8rem;font-weight:700;color:#92400e">
+        ⚠️ No class code yet — <a href="#checkout/Classroom" style="color:#E8562A;font-weight:900">start your free trial</a> to get a class code and invite students.
+      </div>`}
+    </div>
+  </div>`;
 
   const wrap = content => `<div style="max-width:1280px;margin:0 auto;padding:24px 28px">${content}</div>`;
 
@@ -3751,48 +3862,68 @@ Views.dashboardTeacher = function(tab) {
   const classesTab = wrap(`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <h2 style="font-size:1.1rem;font-weight:900">My Classes</h2>
-      <button onclick="Modal.show('Add New Period', Modal.field('Period Name','text','e.g. Period 2 or Block B') + Modal.field('Grade Level','text','e.g. Grade 7') + Modal.field('Class Code','text','Auto-generated if blank') + Modal.select('Color',['Orange 🔴','Green 🟢','Purple 🔵','Blue 🔵']), [{label:'Create Period', fn:\"Modal.toast('Period created!');Modal.close()\", color:'#E8562A'}])" style="background:#E8562A;color:white;border:none;border-radius:9px;padding:8px 16px;font-weight:800;font-size:0.82rem;cursor:pointer;font-family:inherit">+ New Period</button>
+      ${classCode
+        ? '<div style="background:#f0fdf4;border:1.5px solid #059669;border-radius:9px;padding:7px 14px;font-size:0.8rem;font-weight:800;color:#059669">📎 Your class code: ' + classCode + '</div>'
+        : '<button onclick="App.go(\'checkout/Classroom\')" style="background:#E8562A;color:white;border:none;border-radius:9px;padding:8px 14px;font-weight:800;font-size:0.8rem;cursor:pointer;font-family:inherit">Get Class Code →</button>'}
     </div>
-    ${PERIODS.map(p=>{
-      const avg=Math.round(p.students.reduce((s,st)=>s+st.score,0)/p.students.length);
-      return `<div style="background:white;border-radius:12px;border:1.5px solid #e5e7eb;overflow:hidden;margin-bottom:12px">
-        <div style="background:${p.color};color:white;padding:11px 16px;display:flex;align-items:center;justify-content:space-between">
-          <div><span style="font-weight:900;font-size:0.9rem">${p.name}</span><span style="opacity:0.8;font-size:0.74rem;margin-left:8px">${p.grade} · ${p.students.length} students · Avg ${avg}%</span></div>
-          <code style="background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:5px;font-size:0.78rem;font-weight:800">${p.code}</code>
+    ${!hasRealStudents ? `
+      <div style="background:#fef9c3;border:1.5px solid #fde68a;border-radius:14px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:flex-start;gap:12px">
+        <span style="font-size:1.5rem;flex-shrink:0">📋</span>
+        <div>
+          <div style="font-size:0.85rem;font-weight:900;color:#92400e;margin-bottom:4px">No students yet — this is a preview</div>
+          <div style="font-size:0.78rem;color:#78350f;line-height:1.5">When students sign up and enter your class code <strong>${classCode || '(get one above)'}</strong>, they'll show up here automatically. The example below is just a preview.</div>
         </div>
-        <div class="ds-table-wrap">
-          <table class="ds-table">
-            <thead><tr><th>Student</th><th>Score</th><th>Lessons</th><th>Last Active</th><th>Status</th></tr></thead>
-            <tbody>${p.students.map(s=>{
-              const sc=s.status==='struggling'?'#fee2e2':s.status==='at-risk'?'#fef3c7':'#dcfce7';
-              const tc=s.status==='struggling'?'#dc2626':s.status==='at-risk'?'#d97706':'#059669';
-              const lb=s.status==='struggling'?'Struggling':s.status==='at-risk'?'At Risk':'On Track';
-              return `<tr class="ds-row"><td style="font-weight:700">${s.name}</td><td style="font-weight:900;color:${s.score>=80?'#059669':s.score>=65?'#d97706':'#dc2626'}">${s.score}%</td><td style="text-align:center">${s.done}</td><td style="color:#6b7280;font-size:0.78rem">${s.last}</td><td><span style="background:${sc};color:${tc};padding:2px 7px;border-radius:999px;font-size:0.68rem;font-weight:800">${lb}</span></td></tr>`;
-            }).join('')}</tbody>
-          </table>
-        </div>
-        <div style="padding:8px 12px;display:flex;gap:7px;border-top:1px solid #f3f4f6">
-          <button onclick="Modal.show('Add Student', Modal.field('Student Name','text','Full name') + Modal.field('Email','email','student@school.edu') + Modal.select('Grade',['Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9']), [{label:'Add Student', fn:\"Modal.toast('Student added!');Modal.close()\", color:'#059669'}])" style="background:#f3f4f6;border:none;border-radius:7px;padding:5px 10px;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:inherit">+ Add Student</button>
-          <label style="cursor:pointer"><span style="background:#f3f4f6;border-radius:7px;padding:5px 10px;font-size:0.72rem;font-weight:700;display:inline-block">📊 CSV Import</span><input type="file" accept=".csv" style="display:none" onchange="App.importCSV(this,'${p.id}')"></label>
-          <button onclick="App.go('assign')" style="background:#E8562A18;color:#E8562A;border:1.5px solid #E8562A;border-radius:7px;padding:5px 10px;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:inherit">📋 Assign Lesson</button>
-        </div>
-      </div>`;
+      </div>` : ''}
+    ${PERIODS.map(p => {
+      const validStudents = p.students.filter(s => s.name);
+      if (!validStudents.length) return '';
+      const scoresOnly = validStudents.filter(s => s.score > 0);
+      const avg = scoresOnly.length ? Math.round(scoresOnly.reduce((sum,st) => sum+st.score,0)/scoresOnly.length) + '%' : '—';
+      const isReal = !!p.students[0]?.joinedAt;
+      const nameStyle = isReal ? 'font-weight:700' : 'font-weight:700;color:#9ca3af';
+      return '<div style="background:white;border-radius:12px;border:1.5px solid #e5e7eb;overflow:hidden;margin-bottom:12px">' +
+        '<div style="background:' + p.color + ';color:white;padding:11px 16px;display:flex;align-items:center;justify-content:space-between">' +
+        '<div><span style="font-weight:900;font-size:0.9rem">' + p.name + '</span>' +
+        '<span style="opacity:0.8;font-size:0.74rem;margin-left:8px">' + p.grade + ' · ' + validStudents.length + ' student' + (validStudents.length!==1?'s':'') + (avg!=='—'?' · Avg '+avg:'') + '</span></div>' +
+        (p.code ? '<code style="background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:5px;font-size:0.78rem;font-weight:800">' + p.code + '</code>' : '') +
+        '</div>' +
+        '<div class="ds-table-wrap"><table class="ds-table">' +
+        '<thead><tr><th>Student</th>' + (isReal ? '<th>Email</th><th>Grade</th><th>Joined</th>' : '<th>Score</th><th>Lessons</th><th>Last Active</th>') + '<th>Status</th></tr></thead>' +
+        '<tbody>' + validStudents.map(s => {
+          const joined = s.joinedAt ? new Date(s.joinedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : (s.last || '—');
+          if (isReal) {
+            return '<tr class="ds-row"><td style="font-weight:700">' + s.name + '</td><td style="font-size:0.78rem;color:#6b7280">' + (s.email||'—') + '</td><td>' + (s.grade||'—') + '</td><td style="font-size:0.78rem;color:#6b7280">' + joined + '</td><td><span style="background:#dcfce7;color:#059669;padding:2px 7px;border-radius:999px;font-size:0.68rem;font-weight:800">Joined</span></td></tr>';
+          }
+          const sc=s.status==='struggling'?'#fee2e2':s.status==='at-risk'?'#fef3c7':'#dcfce7';
+          const tc=s.status==='struggling'?'#dc2626':s.status==='at-risk'?'#d97706':'#059669';
+          const lb=s.status==='struggling'?'Struggling':s.status==='at-risk'?'At Risk':'On Track';
+          return '<tr class="ds-row"><td style="font-weight:700;color:#9ca3af">' + s.name + '</td><td style="font-weight:900;color:#9ca3af">' + s.score + '%</td><td style="text-align:center;color:#9ca3af">' + s.done + '</td><td style="color:#9ca3af;font-size:0.78rem">' + joined + '</td><td><span style="background:'+sc+';color:'+tc+';padding:2px 7px;border-radius:999px;font-size:0.68rem;font-weight:800;opacity:0.5">' + lb + '</span></td></tr>';
+        }).join('') + '</tbody></table></div>' +
+        '<div style="padding:8px 12px;display:flex;gap:7px;align-items:center;border-top:1px solid #f3f4f6">' +
+        '<button onclick="App.go(\'assign\')" style="background:#E8562A18;color:#E8562A;border:1.5px solid #E8562A;border-radius:7px;padding:5px 10px;font-size:0.72rem;font-weight:700;cursor:pointer;font-family:inherit">📋 Assign</button>' +
+        (classCode && !isReal ? '<span style="font-size:0.72rem;color:#6b7280;font-weight:600">Students join with code: <strong>' + classCode + '</strong></span>' : '') +
+        '</div></div>';
     }).join('')}`);
-
   // ── STUDENTS TAB ──
   const studentsTab = wrap(`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <h2 style="font-size:1.1rem;font-weight:900">All Students (${allStudents.length})</h2>
+      <h2 style="font-size:1.1rem;font-weight:900">All Students (${allStudents.length}${!hasRealStudents ? ' — preview only' : ''})</h2>
+      ${classCode ? '<button onclick="App.go(\'join-class\')" style="background:#059669;color:white;border:none;border-radius:9px;padding:7px 14px;font-weight:800;font-size:0.8rem;cursor:pointer;font-family:inherit">+ Invite Students</button>' : ''}
     </div>
+    ${!hasRealStudents ? '<div style="background:#e0f2fe;border:1.5px solid #7dd3fc;border-radius:12px;padding:14px 18px;margin-bottom:14px;font-size:0.82rem;color:#0369a1;font-weight:600">👋 No real students have joined yet. Share your class code <strong>' + (classCode||'(get one from teacher pricing)') + '</strong> with students to see them appear here.</div>' : ''}
     <div style="background:white;border-radius:12px;border:1.5px solid #e5e7eb;overflow:hidden">
       <div class="ds-table-wrap">
         <table class="ds-table">
-          <thead><tr><th>Name</th><th>Period</th><th>Score</th><th>Lessons</th><th>Last Active</th><th>Status</th></tr></thead>
-          <tbody>${allStudents.map(s=>{
+          <thead><tr><th>Name</th><th>Class</th>${hasRealStudents ? '<th>Email</th><th>Grade</th><th>Joined</th>' : '<th>Score</th><th>Lessons</th><th>Last Active</th><th>Status</th>'}</tr></thead>
+          <tbody>${allStudents.map(s => {
+            const joined = s.joinedAt ? new Date(s.joinedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : (s.last||'—');
+            if (hasRealStudents) {
+              return '<tr class="ds-row"><td style="font-weight:700">' + s.name + '</td><td><span style="background:#05996918;color:#059669;padding:2px 6px;border-radius:4px;font-size:0.7rem;font-weight:800">' + (s.period||'Your Class') + '</span></td><td style="font-size:0.78rem;color:#6b7280">' + (s.email||'—') + '</td><td>' + (s.grade||'—') + '</td><td style="font-size:0.78rem;color:#6b7280">' + joined + '</td></tr>';
+            }
             const sc=s.status==='struggling'?'#fee2e2':s.status==='at-risk'?'#fef3c7':'#dcfce7';
             const tc=s.status==='struggling'?'#dc2626':s.status==='at-risk'?'#d97706':'#059669';
             const lb=s.status==='struggling'?'Struggling':s.status==='at-risk'?'At Risk':'On Track';
-            return `<tr class="ds-row"><td style="font-weight:700">${s.name}</td><td><span style="background:${s.periodColor}18;color:${s.periodColor};padding:2px 6px;border-radius:4px;font-size:0.7rem;font-weight:800">${s.period}</span></td><td style="font-weight:900;color:${s.score>=80?'#059669':s.score>=65?'#d97706':'#dc2626'}">${s.score}%</td><td style="text-align:center">${s.done}</td><td style="color:#6b7280;font-size:0.78rem">${s.last}</td><td><span style="background:${sc};color:${tc};padding:2px 7px;border-radius:999px;font-size:0.68rem;font-weight:800">${lb}</span></td></tr>`;
+            return '<tr class="ds-row" style="opacity:0.5"><td style="font-weight:700">' + s.name + '</td><td><span style="background:' + s.periodColor + '18;color:' + s.periodColor + ';padding:2px 6px;border-radius:4px;font-size:0.7rem;font-weight:800">' + s.period + '</span></td><td style="font-weight:900">' + s.score + '%</td><td style="text-align:center">' + s.done + '</td><td style="color:#6b7280;font-size:0.78rem">' + (s.last||'—') + '</td><td><span style="background:'+sc+';color:'+tc+';padding:2px 7px;border-radius:999px;font-size:0.68rem;font-weight:800">' + lb + '</span></td></tr>';
           }).join('')}</tbody>
         </table>
       </div>

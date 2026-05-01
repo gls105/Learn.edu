@@ -131,6 +131,16 @@ const App = {
     } else if (view === 'teacher-pricing') {
       app.innerHTML = Views.teacherPricing();
 
+    } else if (view === 'checkout') {
+      const plan = decodeURIComponent(parts[1] || 'Classroom');
+      app.innerHTML = Views.checkout(plan);
+
+    } else if (view === 'checkout-success') {
+      app.innerHTML = Views.checkoutSuccess();
+
+    } else if (view === 'join-class') {
+      app.innerHTML = Views.joinClass();
+
     } else if (view === 'district-welcome') {
       app.innerHTML = Views.districtWelcome();
 
@@ -178,62 +188,110 @@ const App = {
       this.go('home');
     }
   },
-  // Roles that require an access code before entering their dashboard
-  _needsCode(role) { return role === 'admin' || role === 'teacher'; },
-  ACCESS_CODE: 'D-A1-00',
+  // No access-code gate — real users authenticate via email
+  _needsCode(role) { return false; },
+
+  // Generate a deterministic but unique-looking class code from teacher name + school
+  generateClassCode(name, school) {
+    const str = ((name || '') + (school || '')).toUpperCase().replace(/[^A-Z0-9]/g, '') || 'LEARN';
+    let num = 0;
+    for (let i = 0; i < str.length; i++) num += str.charCodeAt(i) * (i + 1);
+    num = ((num % 9000) + 1000);
+    return 'LRN-' + num;
+  },
 
   completeSignup(event, role) {
     event.preventDefault();
     const form = event.target;
     const data = {};
     new FormData(form).forEach((v, k) => { data[k] = v; });
-    const user = { role, name: data.name || data.district || 'User', ...data, joinedAt: Date.now() };
+    const user = { role, name: data.name || data.district || 'User', email: data.email || '', ...data, joinedAt: Date.now() };
+    // Teachers get a unique class code based on their name + school
+    if (role === 'teacher') {
+      user.classCode = this.generateClassCode(data.name || '', data.school || '');
+    }
+    // Students who provide a class code join that teacher's class
+    if (role === 'student' && data.joinCode) {
+      user.joinedClassCode = data.joinCode.trim().toUpperCase();
+    }
     this.saveUser(user);
-    // Store where to go after the loading screen
+    // Register student in the shared roster so teachers can see them
+    if (role === 'student') {
+      const all = JSON.parse(localStorage.getItem('learnedu-all-students') || '[]');
+      all.push({ name: user.name, email: user.email, grade: user.grade, joinedClassCode: user.joinedClassCode || null, joinedAt: Date.now() });
+      localStorage.setItem('learnedu-all-students', JSON.stringify(all));
+    }
     const dest = role === 'student'
-      ? ((data.schooltype||'').toLowerCase().includes('homeschool') ? 'homeschool-onboard' : 'district-welcome')
+      ? 'home'
       : role === 'teacher' ? 'teacher-onboard/1'
-      : this._needsCode(role) ? 'access-code/' + role
-      : 'dashboard/' + role;
+      : role === 'parent'  ? 'dashboard/parent'
+      : 'dashboard/district';
     localStorage.setItem('learnedu-signup-dest', dest);
     this.go('signup-loading');
   },
+
   loginSubmit(event) {
     event.preventDefault();
     const form = event.target;
-    const pwd = (form.querySelector('[name=password]') || {}).value || '';
-    // Quick-access shortcut: password 1114 (any email) → teacher dashboard
-    if (pwd.trim() === '1114') {
-      this.saveUser({ role:'teacher', name:'Ms. Rivera', school:'Lincoln Middle School', demo:true, joinedAt: Date.now() });
-      this.go('access-code/teacher');
+    const email = ((form.querySelector('[name=email]') || {}).value || '').trim().toLowerCase();
+    const existing = this.getUser();
+    // Match by email if available, or fall through if only one account exists on this device
+    if (existing && (!email || !existing.email || existing.email.toLowerCase() === email)) {
+      if (existing.role === 'parent') { this.go('profile-picker'); return; }
+      this.go('dashboard/' + existing.role);
       return;
     }
-    const existing = this.getUser();
-    if (existing) {
-      if (existing.role === 'parent') { this.go('profile-picker'); return; }
-      this.go(this._needsCode(existing.role) ? 'access-code/' + existing.role : 'dashboard/' + existing.role);
-    } else {
-      alert('No account found. Please sign up first!');
-      this.go('signup');
-    }
+    document.getElementById('login-error') && (document.getElementById('login-error').style.display = 'block');
   },
-  loginAsDemo(role) {
-    const names = { student:'Demo Student', teacher:'Ms. Demo', parent:'Demo Parent', district:'Demo District' };
-    this.saveUser({ role, name: names[role] || role, demo: true, schooltype:'From a school or district', joinedAt: Date.now() });
-    if (role === 'student') { this.go('home'); return; }
-    if (role === 'parent')  { this.go('profile-picker');   return; }
-    this.go(this._needsCode(role) ? 'access-code/' + role : 'dashboard/' + role);
-  },
+
   checkAccessCode(event, role) {
+    // Legacy fallback — no longer used in normal flow
     event.preventDefault();
-    const entered = (document.getElementById('access-code-input').value || '').trim().toUpperCase();
-    if (entered === this.ACCESS_CODE) {
-      this.go('dashboard/' + role);
-    } else {
-      const err = document.getElementById('access-code-error');
-      if (err) { err.textContent = 'Incorrect code. Try again.'; err.style.display = 'block'; }
-      document.getElementById('access-code-input').style.borderColor = '#dc2626';
+    this.go('dashboard/' + role);
+  },
+
+  startTeacherTrial(plan) {
+    this.go('checkout/' + encodeURIComponent(plan));
+  },
+
+  submitCheckout(event, plan) {
+    event.preventDefault();
+    const form = event.target;
+    const data = {};
+    new FormData(form).forEach((v, k) => { data[k] = v; });
+    const u = this.getUser() || {};
+    u.plan = plan;
+    u.planActive = true;
+    u.trialStarted = Date.now();
+    if (data.email) u.email = data.email;
+    if (data.name)  u.name  = data.name;
+    if (data.school) u.school = data.school;
+    if (!u.role) u.role = 'teacher';
+    if (!u.classCode) u.classCode = this.generateClassCode(u.name || '', u.school || '');
+    this.saveUser(u);
+    this.go('checkout-success');
+  },
+
+  joinClass(event) {
+    event.preventDefault();
+    const code = (document.getElementById('join-class-input').value || '').trim().toUpperCase();
+    if (!code.match(/^LRN-\d{4}$/)) {
+      const err = document.getElementById('join-class-error');
+      if (err) { err.textContent = 'Invalid code format — should look like LRN-1234'; err.style.display = 'block'; }
+      return;
     }
+    const u = this.getUser();
+    if (u) {
+      u.joinedClassCode = code;
+      this.saveUser(u);
+      // Update shared roster too
+      const all = JSON.parse(localStorage.getItem('learnedu-all-students') || '[]');
+      const idx = all.findIndex(s => s.email && u.email && s.email === u.email);
+      if (idx >= 0) { all[idx].joinedClassCode = code; }
+      else { all.push({ name: u.name, email: u.email || '', grade: u.grade, joinedClassCode: code, joinedAt: Date.now() }); }
+      localStorage.setItem('learnedu-all-students', JSON.stringify(all));
+    }
+    this.go('home');
   },
 
   saveOnboardStep(event, step) {
@@ -272,16 +330,7 @@ const App = {
       this.go('teacher-pricing');
     }
   },
-  startTeacherTrial(plan) {
-    const u = this.getUser();
-    if (u) { u.plan = plan; u.trialStarted = Date.now(); this.saveUser(u); }
-    const ob = JSON.parse(localStorage.getItem('learnedu-teacher-onboard') || '{}');
-    const u2 = this.getUser();
-    if (u2 && ob.name) u2.name = ob.name;
-    if (u2) this.saveUser(u2);
-    alert('14-day free trial started! Welcome to Learn.edu ' + plan + '.');
-    this.go('access-code/teacher');
-  },
+  // startTeacherTrial is defined above (navigates to checkout)
 
   proceedAssign(subject, level) {
     const boxes = document.querySelectorAll('[data-id]:checked');
