@@ -296,9 +296,50 @@ const App = {
 
   // ── Roster Import ─────────────────────────────────────
   parseRosterText(text) {
-    return text.split(/[\n,;]+/)
+    // Split on newlines only (not commas — CSVs are handled by parseCSVNames)
+    return text.split(/\n/)
       .map(s => s.trim().replace(/^["']|["']$/g, ''))
-      .filter(s => s.length > 2 && s.length < 60);
+      .filter(s => s.length > 2 && s.length < 80 && !s.includes('@') && !/^\d+$/.test(s));
+  },
+
+  parseCSVNames(text) {
+    const lines = text.split(/\n/).map(l => l.trim()).filter(Boolean);
+    const names = [];
+    let headerChecked = false;
+    let firstCol = 0, secondCol = -1;
+    for (const line of lines) {
+      const cols = line.split(',').map(c => c.trim().replace(/^["']|["']$/g, ''));
+      if (!headerChecked) {
+        headerChecked = true;
+        const h = cols.map(c => c.toLowerCase());
+        // Detect if first row is a header
+        if (h[0] === 'first name' || h[0] === 'firstname' || h[0] === 'name' || h[0] === 'student') {
+          const lastIdx = h.indexOf('last name') !== -1 ? h.indexOf('last name') : h.indexOf('lastname');
+          if (lastIdx !== -1) { firstCol = 0; secondCol = lastIdx; }
+          continue; // skip header row
+        }
+        // No header — treat first col (or first+second) as name
+        const possiblyLastName = cols[1] && !/\d/.test(cols[1]) && !cols[1].includes('@') && cols[1].length > 1;
+        if (possiblyLastName) secondCol = 1;
+      }
+      const first = cols[firstCol] || '';
+      const last  = secondCol !== -1 ? (cols[secondCol] || '') : '';
+      const full  = (first + (last ? ' ' + last : '')).trim();
+      if (full.length > 2 && full.length < 80 && !full.includes('@') && !/^\d+$/.test(full)) names.push(full);
+    }
+    return names;
+  },
+
+  _previewRoster(text) {
+    const names = this.parseRosterText(text);
+    const el = document.getElementById('roster-preview');
+    if (!el) return;
+    if (!names.length) { el.innerHTML = ''; return; }
+    el.innerHTML = '<div style="font-size:0.78rem;font-weight:700;color:#374151;margin-bottom:8px">Preview — ' + names.length + ' student' + (names.length !== 1 ? 's' : '') + ' found:</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
+      names.slice(0, 40).map(n => '<span style="background:#f0fdf4;border:1.5px solid #059669;color:#059669;border-radius:999px;padding:3px 10px;font-size:0.78rem;font-weight:700">' + n + '</span>').join('') +
+      (names.length > 40 ? '<span style="color:#9ca3af;font-size:0.78rem;align-self:center">+' + (names.length - 40) + ' more</span>' : '') +
+      '</div>';
   },
 
   saveRoster(names) {
@@ -337,10 +378,11 @@ const App = {
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target.result;
-      const names = this.parseRosterText(text);
+      // Use CSV-aware parser (handles First Name + Last Name columns)
+      const names = this.parseCSVNames(text);
       const ta = document.getElementById('roster-input');
-      if (ta) ta.value = names.join('\n');
-      // Switch to paste tab
+      if (ta) { ta.value = names.join('\n'); this._previewRoster(ta.value); }
+      // Switch to paste tab for review
       document.getElementById('roster-tab-paste') && document.getElementById('roster-tab-paste').click();
     };
     reader.readAsText(file);

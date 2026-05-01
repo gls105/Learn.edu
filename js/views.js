@@ -4853,17 +4853,5 @@ Ethan Brown" oninput="App._previewRoster(this.value)" style="width:100%;height:2
 
     </div>
 
-    <script>
-    App._previewRoster = function(text) {
-      const names = App.parseRosterText(text);
-      const el = document.getElementById('roster-preview');
-      if (!el) return;
-      if (!names.length) { el.innerHTML = ''; return; }
-      el.innerHTML = '<div style="font-size:0.78rem;font-weight:700;color:#374151;margin-bottom:8px">Preview — ' + names.length + ' student' + (names.length!==1?'s':'') + ' found:</div>' +
-        '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
-        names.slice(0,40).map(n => '<span style="background:#f0fdf4;border:1.5px solid #059669;color:#059669;border-radius:999px;padding:3px 10px;font-size:0.78rem;font-weight:700">' + n + '</span>').join('') +
-        (names.length > 40 ? '<span style="color:#9ca3af;font-size:0.78rem;align-self:center">+' + (names.length-40) + ' more</span>' : '') +
-        '</div>';
-    };
-    </script>`;
+`;
 };
