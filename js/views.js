@@ -207,7 +207,7 @@ const Views = {
       science: { icon: '⚗️', name: 'Science',              data: () => SCIENCE_LESSONS, leveled: true  },
       spanish: { icon: '🌎', name: 'Spanish',              data: () => SPANISH_LESSONS, leveled: true  },
       ela:     { icon: '📚', name: 'Language Arts',        data: () => (typeof ELA_LESSONS     !=='undefined'?ELA_LESSONS    :[]), leveled: true },
-      history: { icon: '🏻', name: 'History',              data: () => (typeof HISTORY_LESSONS !=='undefined'?HISTORY_LESSONS:[]), leveled: true },
+      history: { icon: '🏛️', name: 'History',              data: () => (typeof HISTORY_LESSONS !=='undefined'?HISTORY_LESSONS:[]), leveled: true },
     };
     const s = META[subjectKey];
     if (!s) return this.notFound();
@@ -3677,7 +3677,7 @@ Views.studentHome = function() {
 
 // ── Teacher Dashboard ──────────────────────────────────────────────────────
 Views.dashboardTeacher = function(tab) {
-  tab = tab || 'dashboard';
+  tab = (tab === 'overview') ? 'dashboard' : (tab || 'dashboard');
 
   // Load real students who joined via this teacher's class code
   const user = (typeof App !== 'undefined') ? App.getUser() : {};
@@ -3688,11 +3688,20 @@ Views.dashboardTeacher = function(tab) {
     : [];
   const hasRealStudents = realStudents.length > 0;
 
-  // Build PERIODS from real students only — no fake data
+  // Build PERIODS from real students. If none exist yet, show a labeled demo preview
+  // so the teacher portal still feels like a real command center before launch.
+  const DEMO_STUDENTS = [
+    { name:'Ava Johnson', grade:'6', done:14, score:94, last:'12 min ago', status:'on-track', trend:'+6%', focus:'Ratios' },
+    { name:'Mateo Rivera', grade:'6', done:12, score:88, last:'26 min ago', status:'on-track', trend:'+3%', focus:'Ecosystems' },
+    { name:'Sophia Chen', grade:'6', done:10, score:81, last:'Today', status:'on-track', trend:'+1%', focus:'Essay claims' },
+    { name:'Leo Martin', grade:'6', done:7, score:67, last:'Yesterday', status:'at-risk', trend:'-4%', focus:'Fraction division' },
+    { name:'Noah Patel', grade:'6', done:5, score:58, last:'4 days ago', status:'struggling', trend:'-9%', focus:'Unit rates' },
+    { name:'Isabella Garcia', grade:'6', done:9, score:73, last:'Today', status:'at-risk', trend:'+2%', focus:'Verb conjugation' },
+  ];
   const PERIODS = hasRealStudents
     ? [{ id:'real', name:'Your Class', grade:'Students who joined ' + (classCode||'your class'), code: classCode||'', color:'#059669',
-         students: realStudents.map(s => ({ name: s.name, email: s.email||'', grade: s.grade||'', done:0, score:0, last:'Just joined', status:'on-track' })) }]
-    : [];
+         students: realStudents.map(s => ({ name: s.name, email: s.email||'', grade: s.grade||'', joinedAt:s.joinedAt||Date.now(), done:0, score:null, last:'Just joined', status:'on-track', trend:'new', focus:'Placement pending' })) }]
+    : [{ id:'demo', name:'Demo Period 1', grade:'Grade 6 preview data', code: classCode||'LRN-1234', color:'#E8562A', students: DEMO_STUDENTS }];
 
   const BASE_ASSIGNMENTS = [
     {id:'a1', title:'Ratios & Rates',     subject:'Math',    due:'May 2',  periods:['Period 1','Period 3'], completed:11, total:15, color:'#E8562A', link:'subject/math/6'},
@@ -3706,6 +3715,18 @@ Views.dashboardTeacher = function(tab) {
 
   const allStudents = PERIODS.flatMap(p => p.students.map(s => ({...s, period:p.name, periodColor:p.color})));
   const struggling  = allStudents.filter(s => s.status !== 'on-track');
+  const leaderboard = allStudents
+    .filter(s => typeof s.score === 'number')
+    .slice()
+    .sort((a,b) => (b.score || 0) - (a.score || 0))
+    .slice(0,5);
+  const avgCompletion = allStudents.length ? Math.round(allStudents.reduce((sum,s)=>sum+(s.done||0),0) / allStudents.length) : 0;
+  const checkInQueue = struggling.length ? struggling.slice().sort((a,b)=>(a.score||0)-(b.score||0)).slice(0,3) : allStudents.slice(0,3);
+  const classPulse = [
+    { label:'Do Now', value: hasRealStudents ? 'Waiting for first activity' : '18/24 in progress', color:'#0369a1' },
+    { label:'Exit Ticket', value: hasRealStudents ? 'Not assigned' : '72% avg', color:'#059669' },
+    { label:'Missing Work', value: hasRealStudents ? '0 items' : '5 items', color:'#dc2626' },
+  ];
   const teacherName = (user && user.name) ? user.name : 'Teacher';
   const firstName   = teacherName.split(' ')[0] || teacherName;
 
@@ -3811,6 +3832,45 @@ Views.dashboardTeacher = function(tab) {
       <button onclick="App.go('roster-import')" style="margin-left:auto;background:#059669;color:white;border:none;border-radius:8px;padding:6px 14px;font-size:0.78rem;font-weight:800;cursor:pointer;font-family:inherit">Import Roster →</button>
     </div>`}
 
+    <!-- New feature: classroom command center plan -->
+    <div style="display:grid;grid-template-columns:1.2fr .8fr;gap:14px;margin-bottom:20px">
+      <div style="background:linear-gradient(135deg,#111827,#1f2937);border-radius:18px;padding:18px 20px;color:white;box-shadow:0 18px 45px rgba(17,24,39,.18)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div>
+            <div style="font-size:0.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#fbbf24;margin-bottom:4px">Today’s Teaching Plan</div>
+            <div style="font-size:1.05rem;font-weight:900">Small-group plan generated from class progress</div>
+          </div>
+          <button onclick="App.go('dashboard/teacher/struggling')" style="background:#fbbf24;color:#111827;border:none;border-radius:9px;padding:7px 12px;font-size:.74rem;font-weight:900;cursor:pointer;font-family:inherit">Review group →</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+          ${[
+            {tag:'1 · Warm-up', title:'5-question spiral', desc:'Start with ratios, vocab, and one writing prompt.'},
+            {tag:'2 · Small Group', title:(checkInQueue.length ? checkInQueue.map(s=>s.name.split(' ')[0]).join(', ') : 'No urgent group'), desc:'Reteach the lowest-confidence skill for 10 minutes.'},
+            {tag:'3 · Exit Ticket', title:'One proof point', desc:'Collect one score before assigning homework.'},
+          ].map(x=>`
+            <div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:12px">
+              <div style="font-size:.64rem;font-weight:900;color:#fbbf24;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">${x.tag}</div>
+              <div style="font-size:.86rem;font-weight:900;margin-bottom:4px">${x.title}</div>
+              <div style="font-size:.72rem;line-height:1.4;color:#d1d5db">${x.desc}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div style="background:white;border:1.5px solid #e5e7eb;border-radius:18px;padding:18px 20px">
+        <div style="font-size:0.76rem;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;margin-bottom:10px">Live Class Pulse</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          ${classPulse.map(p=>`
+            <div style="display:flex;align-items:center;justify-content:space-between;background:#f9fafb;border-radius:12px;padding:11px 12px">
+              <span style="font-size:.8rem;font-weight:800;color:#374151">${p.label}</span>
+              <span style="font-size:.8rem;font-weight:900;color:${p.color}">${p.value}</span>
+            </div>`).join('')}
+          <div style="display:flex;align-items:center;justify-content:space-between;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:11px 12px">
+            <span style="font-size:.8rem;font-weight:800;color:#166534">Avg lessons completed</span>
+            <span style="font-size:.8rem;font-weight:900;color:#059669">${avgCompletion}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div style="display:grid;grid-template-columns:1fr 280px;gap:20px;align-items:start">
       <div>
         <!-- Quick Actions -->
@@ -3850,21 +3910,26 @@ Views.dashboardTeacher = function(tab) {
           ${actionCard('#059669','📊','Assignment Report','Track who has and hasn\'t completed their work.','dashboard/teacher/assignments')}
         </div>
       </div>
-      <div style="background:white;border-radius:14px;border:1.5px solid #e5e7eb;overflow:hidden;position:sticky;top:20px">
-        <div style="background:#111827;color:white;padding:11px 16px"><h3 style="font-size:0.85rem;font-weight:900">🏆 Top Performers</h3></div>
-      <div style="background:white;border-radius:14px;border:1.5px solid #e5e7eb;overflow:hidden;position:sticky;top:20px">
-        <div style="background:#111827;color:white;padding:11px 16px"><h3 style="font-size:0.85rem;font-weight:900">🏆 Leaderboard</h3></div>
-        ${leaderboard.map((s,i)=>`
-          <div style="display:flex;align-items:center;gap:9px;padding:9px 14px;border-bottom:1px solid #f9fafb">
-            <span style="font-size:0.88rem;font-weight:900;color:${i===0?'#d97706':i===1?'#9ca3af':i===2?'#b45309':'#6b7280'};width:16px">${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</span>
-            <div style="flex:1;min-width:0">
-              <div style="font-weight:800;font-size:0.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.name}</div>
-              <div style="font-size:0.68rem;color:#9ca3af">${s.period}</div>
-            </div>
-            <span style="font-weight:900;font-size:0.85rem;color:${s.score>=80?'#059669':s.score>=65?'#d97706':'#dc2626'}">${s.score}%</span>
-          </div>`).join('')}
-        <div style="padding:9px 14px;text-align:center">
-          <button onclick="App.go('dashboard/teacher/students')" style="background:none;border:none;font-size:0.73rem;font-weight:700;color:#E8562A;cursor:pointer">View all students →</button>
+      <div style="display:flex;flex-direction:column;gap:14px;position:sticky;top:20px">
+        <div style="background:white;border-radius:14px;border:1.5px solid #e5e7eb;overflow:hidden">
+          <div style="background:#111827;color:white;padding:11px 16px"><h3 style="font-size:0.85rem;font-weight:900">🏆 Leaderboard</h3></div>
+          ${leaderboard.length ? leaderboard.map((s,i)=>`
+            <div style="display:flex;align-items:center;gap:9px;padding:9px 14px;border-bottom:1px solid #f9fafb">
+              <span style="font-size:0.88rem;font-weight:900;color:${i===0?'#d97706':i===1?'#9ca3af':i===2?'#b45309':'#6b7280'};width:18px">${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</span>
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:800;font-size:0.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.name}</div>
+                <div style="font-size:0.68rem;color:#9ca3af">${s.period}</div>
+              </div>
+              <span style="font-weight:900;font-size:0.85rem;color:${s.score>=80?'#059669':s.score>=65?'#d97706':'#dc2626'}">${s.score}%</span>
+            </div>`).join('') : `<div style="padding:18px 14px;font-size:0.78rem;color:#9ca3af;text-align:center">Scores appear after students complete lessons.</div>`}
+          <div style="padding:9px 14px;text-align:center">
+            <button onclick="App.go('dashboard/teacher/students')" style="background:none;border:none;font-size:0.73rem;font-weight:700;color:#E8562A;cursor:pointer">View all students →</button>
+          </div>
+        </div>
+        <div style="background:#fff7ed;border:1.5px solid #fed7aa;border-radius:14px;padding:14px 16px">
+          <div style="font-size:0.73rem;font-weight:900;color:#c2410c;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Today’s Teacher Move</div>
+          <div style="font-size:0.9rem;font-weight:900;color:#7c2d12;margin-bottom:5px">Pull a 10-minute small group</div>
+          <div style="font-size:0.75rem;line-height:1.45;color:#9a3412">Focus on ${checkInQueue[0]?.focus || 'students who need support'} and assign one quick practice item before the exit ticket.</div>
         </div>
       </div>
     </div>`);

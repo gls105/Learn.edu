@@ -1,5 +1,5 @@
 // Learn.edu — Service Worker (offline support)
-const CACHE = 'learnedu-v28';
+const CACHE = 'learnedu-v29';
 const CORE  = [
   '/',
   '/index.html',
