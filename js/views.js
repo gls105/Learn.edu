@@ -3761,6 +3761,7 @@ Views.dashboardTeacher = function(tab) {
         <div style="display:flex;gap:0;border-top:1px solid #f3f4f6">
           ${[
             {id:'dashboard',   label:'📊 Overview'},
+            {id:'gradebook',   label:'📒 Gradebook'},
             {id:'roster',      label:'📋 My Roster'},
             {id:'assignments', label:'📝 Assignments'},
             {id:'students',    label:'📈 Progress'},
@@ -4127,7 +4128,166 @@ Views.dashboardTeacher = function(tab) {
     </div>
   `);
 
-  const bodyMap = {dashboard:dashTab, roster:rosterTab, classes:classesTab, students:studentsTab, assignments:assignmentsTab, struggling:strugglingTab};
+  // ── GRADEBOOK TAB ──
+  const GRADE_PERIODS = [
+    { id:'p1', label:'Period 1', subject:'8th Math', teacher:'Ms. Martinez' },
+    { id:'p2', label:'Period 2', subject:'7th Math', teacher:'Ms. Martinez' },
+    { id:'p3', label:'Period 3', subject:'6th Math', teacher:'Ms. Martinez' },
+    { id:'p4', label:'Period 4', subject:'8th Science', teacher:'Ms. Martinez' },
+    { id:'p5', label:'Period 5', subject:'Spanish 1', teacher:'Ms. Martinez' },
+    { id:'p6', label:'Period 6', subject:'ELA 6', teacher:'Ms. Martinez' },
+  ];
+  const GB_STUDENTS = [
+    { name:'Ava Johnson',      grades:[92,88,95,null,90],  avg:91, status:'on-track' },
+    { name:'Mateo Rivera',     grades:[85,79,88,82,null],  avg:84, status:'on-track' },
+    { name:'Sophia Chen',      grades:[78,81,74,88,76],    avg:79, status:'on-track' },
+    { name:'Leo Martin',       grades:[64,null,71,68,60],  avg:66, status:'at-risk' },
+    { name:'Noah Patel',       grades:[52,58,null,55,61],  avg:57, status:'struggling' },
+    { name:'Isabella Garcia',  grades:[90,93,87,null,94],  avg:91, status:'on-track' },
+  ];
+  const GB_ASSIGNMENTS = ['HW 1','HW 2','Quiz 1','HW 3','Quiz 2'];
+  const gbPeriodId = 'p1'; // default period shown
+  const gbPeriod = GRADE_PERIODS.find(p=>p.id===gbPeriodId);
+  const gbAvg = Math.round(GB_STUDENTS.reduce((s,x)=>s+x.avg,0)/GB_STUDENTS.length);
+  const gbAtRisk = GB_STUDENTS.filter(s=>s.status!=='on-track').length;
+
+  const gbRows = GB_STUDENTS.map(s => {
+    const statusColor = s.status==='on-track' ? '#059669' : s.status==='at-risk' ? '#d97706' : '#dc2626';
+    const statusBg    = s.status==='on-track' ? '#f0fdf4' : s.status==='at-risk' ? '#fffbeb' : '#fef2f2';
+    const cells = s.grades.map(g => g === null
+      ? `<td style="text-align:center;color:#d1d5db;font-weight:600">—</td>`
+      : `<td style="text-align:center;font-weight:800;color:${g>=80?'#059669':g>=70?'#d97706':'#dc2626'}">${g}</td>`
+    ).join('');
+    return `<tr class="gb-row" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'" style="border-bottom:1px solid #f3f4f6;cursor:default">
+      <td style="padding:11px 16px;font-weight:800;font-size:0.85rem">${s.name}</td>
+      ${cells}
+      <td style="text-align:center;font-weight:900;font-size:0.9rem;color:${statusColor}">${s.avg}%</td>
+      <td><span style="background:${statusBg};color:${statusColor};font-size:0.7rem;font-weight:800;padding:3px 10px;border-radius:999px">${s.status}</span></td>
+    </tr>`;
+  }).join('');
+
+  const gradebookTab = wrap(`
+    <!-- Period tabs -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px">
+      ${GRADE_PERIODS.map(p=>`<button onclick="App.go('dashboard/teacher/gradebook')" style="padding:7px 16px;border-radius:999px;border:1.5px solid ${p.id===gbPeriodId?'#E8562A':'#e5e7eb'};background:${p.id===gbPeriodId?'#E8562A':'white'};color:${p.id===gbPeriodId?'white':'#374151'};font-weight:800;font-size:0.78rem;cursor:pointer;font-family:inherit">${p.label}</button>`).join('')}
+    </div>
+
+    <!-- Gradebook header -->
+    <div style="background:white;border-radius:16px;border:1.5px solid #e5e7eb;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <div style="font-size:1rem;font-weight:900;color:#111">${gbPeriod.label} — ${gbPeriod.subject} | ${gbPeriod.teacher}</div>
+        <div style="font-size:0.78rem;color:#6b7280;margin-top:3px">${GB_STUDENTS.length} students · Avg: <strong style="color:#059669">${gbAvg}%</strong> · At-risk: <strong style="color:#dc2626">${gbAtRisk}</strong> · Last saved: just now</div>
+      </div>
+
+      <!-- Sync dropdown -->
+      <div style="position:relative" id="gb-sync-wrap">
+        <button onclick="(function(){
+          var m=document.getElementById('gb-sync-menu');
+          m.style.display=m.style.display==='none'?'block':'none';
+          var close=function(e){if(!document.getElementById('gb-sync-wrap').contains(e.target)){m.style.display='none';document.removeEventListener('click',close);}};
+          setTimeout(function(){document.addEventListener('click',close)},10);
+        })()" style="display:flex;align-items:center;gap:6px;background:#111;color:white;border:none;border-radius:9px;padding:9px 16px;font-weight:800;font-size:0.82rem;cursor:pointer;font-family:inherit">
+          🔄 Sync <span style="font-size:0.7rem;margin-left:2px">▾</span>
+        </button>
+        <div id="gb-sync-menu" style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:white;border:1.5px solid #e5e7eb;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,0.13);min-width:200px;z-index:999;overflow:hidden">
+          <div style="padding:6px 0">
+            <button onclick="(function(){
+              var names=['Student'].concat(${JSON.stringify(GB_ASSIGNMENTS)});
+              var rows=[names.join(',')];
+              ${JSON.stringify(GB_STUDENTS)}.forEach(function(s){
+                rows.push([s.name].concat(s.grades.map(function(g){return g===null?'':g;})).join(','));
+              });
+              var blob=new Blob([rows.join('\\n')],{type:'text/csv'});
+              var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='gradebook-period1.csv';a.click();
+              document.getElementById('gb-sync-menu').style.display='none';
+            })()" style="width:100%;text-align:left;padding:10px 16px;border:none;background:none;font-size:0.84rem;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:9px" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">📄 Export CSV</button>
+            <button onclick="(function(){
+              var names=['Student'].concat(${JSON.stringify(GB_ASSIGNMENTS)});
+              var rows=[names.join('\\t')];
+              ${JSON.stringify(GB_STUDENTS)}.forEach(function(s){
+                rows.push([s.name].concat(s.grades.map(function(g){return g===null?'':g;})).join('\\t'));
+              });
+              var blob=new Blob(['\\ufeff'+rows.join('\\n')],{type:'application/vnd.ms-excel'});
+              var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='gradebook-period1.xls';a.click();
+              document.getElementById('gb-sync-menu').style.display='none';
+            })()" style="width:100%;text-align:left;padding:10px 16px;border:none;background:none;font-size:0.84rem;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:9px" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">📊 Export Excel</button>
+            <div style="height:1px;background:#f3f4f6;margin:4px 0"></div>
+            <button onclick="(function(){
+              var sub='Gradebook Export - Period 1';
+              var names=['Student'].concat(${JSON.stringify(GB_ASSIGNMENTS)});
+              var rows=[names.join('\\t')];
+              ${JSON.stringify(GB_STUDENTS)}.forEach(function(s){
+                rows.push([s.name].concat(s.grades.map(function(g){return g===null?'—':g;})).join('\\t'));
+              });
+              var body='Here is the current gradebook for Period 1:\\n\\n'+rows.join('\\n');
+              window.location.href='mailto:admin@school.edu?subject='+encodeURIComponent(sub)+'&body='+encodeURIComponent(body);
+              document.getElementById('gb-sync-menu').style.display='none';
+            })()" style="width:100%;text-align:left;padding:10px 16px;border:none;background:none;font-size:0.84rem;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:9px" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">📧 Email Admin</button>
+            <button onclick="(function(){
+              var toast=document.createElement('div');
+              toast.textContent='✅ Synced with Learn.edu!';
+              toast.style.cssText='position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#059669;color:white;padding:11px 24px;border-radius:12px;font-weight:800;font-size:0.88rem;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.18);animation:fadeIn 0.2s';
+              document.body.appendChild(toast);
+              setTimeout(function(){toast.remove();},2500);
+              document.getElementById('gb-sync-menu').style.display='none';
+            })()" style="width:100%;text-align:left;padding:10px 16px;border:none;background:none;font-size:0.84rem;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:9px" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">🔄 Sync Learn.edu</button>
+            <div style="height:1px;background:#f3f4f6;margin:4px 0"></div>
+            <button onclick="(function(){
+              var win=window.open('','_blank');
+              var html='<html><body style="font-family:sans-serif;padding:32px"><h2>Period 1 — 8th Math Gradebook</h2><table border=1 cellpadding=8 cellspacing=0 style="border-collapse:collapse;width:100%"><tr style="background:#E8562A;color:white"><th>Student</th>';
+              ${JSON.stringify(GB_ASSIGNMENTS)}.forEach(function(a){html+='<th>'+a+'</th>';});
+              html+='<th>Avg</th></tr>';
+              ${JSON.stringify(GB_STUDENTS)}.forEach(function(s,i){
+                html+='<tr style="background:'+(i%2===0?'#f9fafb':'white')+'"><td><b>'+s.name+'</b></td>';
+                s.grades.forEach(function(g){html+='<td style="text-align:center">'+(g===null?'—':g)+'</td>';});
+                html+='<td style="text-align:center;font-weight:bold">'+s.avg+'%</td></tr>';
+              });
+              html+='</table><p style="color:#999;margin-top:16px">Exported from Learn.edu · '+new Date().toLocaleDateString()+'</p></body></html>';
+              win.document.write(html);
+              win.document.close();
+              win.print();
+              document.getElementById('gb-sync-menu').style.display='none';
+            })()" style="width:100%;text-align:left;padding:10px 16px;border:none;background:none;font-size:0.84rem;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:9px" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">🖨️ Print</button>
+            <button onclick="(function(){
+              var data=[];
+              ${JSON.stringify(GB_STUDENTS)}.forEach(function(s){
+                data.push({name:s.name,avg:s.avg,status:s.status});
+              });
+              var html='<html><head><style>body{font-family:sans-serif;background:#111;color:white;padding:60px;text-align:center}h1{font-size:3rem;margin-bottom:8px}table{width:100%;border-collapse:collapse;margin-top:32px}th{background:#E8562A;color:white;padding:14px}td{border-bottom:1px solid #333;padding:12px;font-size:1.1rem}tr:hover{background:#222}</style></head><body>';
+              html+='<h1>Period 1 — 8th Math</h1><p style="color:#9ca3af">'+new Date().toLocaleDateString('en-US',{weekday:"long",year:"numeric",month:"long",day:"numeric"})+'</p>';
+              html+='<table><tr><th>Student</th><th>Average</th><th>Status</th></tr>';
+              data.forEach(function(s){
+                var c=s.status==="on-track"?"#4ade80":s.status==="at-risk"?"#fbbf24":"#f87171";
+                html+='<tr><td>'+s.name+'</td><td style="color:'+c+';font-weight:bold">'+s.avg+'%</td><td style="color:'+c+'">'+s.status+'</td></tr>';
+              });
+              html+='</table></body></html>';
+              var w=window.open('','_blank');
+              w.document.write(html);w.document.close();
+              document.getElementById('gb-sync-menu').style.display='none';
+            })()" style="width:100%;text-align:left;padding:10px 16px;border:none;background:none;font-size:0.84rem;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:9px" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">📽️ Presentation Maker</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gradebook table -->
+    <div style="background:white;border-radius:16px;border:1.5px solid #e5e7eb;overflow:hidden">
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb">
+            <th style="text-align:left;padding:12px 16px;font-size:0.78rem;font-weight:900;text-transform:uppercase;letter-spacing:0.06em;color:#6b7280">Student</th>
+            ${GB_ASSIGNMENTS.map(a=>`<th style="text-align:center;padding:12px 10px;font-size:0.78rem;font-weight:900;text-transform:uppercase;letter-spacing:0.06em;color:#6b7280">${a}</th>`).join('')}
+            <th style="text-align:center;padding:12px 10px;font-size:0.78rem;font-weight:900;text-transform:uppercase;letter-spacing:0.06em;color:#6b7280">Avg</th>
+            <th style="text-align:center;padding:12px 10px;font-size:0.78rem;font-weight:900;text-transform:uppercase;letter-spacing:0.06em;color:#6b7280">Status</th>
+          </tr>
+        </thead>
+        <tbody>${gbRows}</tbody>
+      </table>
+    </div>
+    <p style="margin-top:10px;font-size:0.72rem;color:#9ca3af;text-align:center">Demo data only — real grades connect when students complete assignments.</p>
+  `);
+
+  const bodyMap = {dashboard:dashTab, gradebook:gradebookTab, roster:rosterTab, classes:classesTab, students:studentsTab, assignments:assignmentsTab, struggling:strugglingTab};
 
   return `
     <style>
