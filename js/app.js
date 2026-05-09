@@ -856,3 +856,132 @@ window.addEventListener('load', () => {
   DevPanel.init();
   App.route();
 });
+
+// ── Gradebook Sync Actions ────────────────────────────────────
+const GradebookSync = {
+  ASSIGNMENTS: ['HW 1','HW 2','Quiz 1','HW 3','Quiz 2'],
+  STUDENTS: [
+    { name:'Ava Johnson',     grades:[92,88,95,null,90], avg:91, status:'on-track' },
+    { name:'Mateo Rivera',    grades:[85,79,88,82,null], avg:84, status:'on-track' },
+    { name:'Sophia Chen',     grades:[78,81,74,88,76],   avg:79, status:'on-track' },
+    { name:'Leo Martin',      grades:[64,null,71,68,60], avg:66, status:'at-risk' },
+    { name:'Noah Patel',      grades:[52,58,null,55,61], avg:57, status:'struggling' },
+    { name:'Isabella Garcia', grades:[90,93,87,null,94], avg:91, status:'on-track' },
+  ],
+  PERIOD: 'Period 1 — 8th Math',
+
+  closeMenu() {
+    var m = document.getElementById('gb-sync-menu');
+    if (m) m.style.display = 'none';
+  },
+  toggleMenu() {
+    var m = document.getElementById('gb-sync-menu');
+    if (!m) return;
+    var isOpen = m.style.display === 'block';
+    m.style.display = isOpen ? 'none' : 'block';
+    if (!isOpen) {
+      var self = this;
+      var close = function(e) {
+        var wrap = document.getElementById('gb-sync-wrap');
+        if (wrap && !wrap.contains(e.target)) {
+          m.style.display = 'none';
+          document.removeEventListener('click', close);
+        }
+      };
+      setTimeout(function() { document.addEventListener('click', close); }, 10);
+    }
+  },
+  exportCSV() {
+    var cols = ['Student'].concat(this.ASSIGNMENTS);
+    var rows = [cols.join(',')];
+    this.STUDENTS.forEach(function(s) {
+      rows.push(['"' + s.name + '"'].concat(s.grades.map(function(g) { return g === null ? '' : g; })).join(','));
+    });
+    var blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'gradebook-period1.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    this.closeMenu();
+    Modal.toast('CSV downloaded!');
+  },
+  exportExcel() {
+    var cols = ['Student'].concat(this.ASSIGNMENTS);
+    var rows = [cols.join('\t')];
+    this.STUDENTS.forEach(function(s) {
+      rows.push([s.name].concat(s.grades.map(function(g) { return g === null ? '' : g; })).join('\t'));
+    });
+    var blob = new Blob(['\ufeff' + rows.join('\n')], { type: 'application/vnd.ms-excel' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'gradebook-period1.xls';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    this.closeMenu();
+    Modal.toast('Excel file downloaded!');
+  },
+  emailAdmin() {
+    var subject = 'Gradebook Export — ' + this.PERIOD;
+    var cols = ['Student'].concat(this.ASSIGNMENTS).concat(['Avg']).join('\t');
+    var self = this;
+    var dataRows = this.STUDENTS.map(function(s) {
+      return [s.name].concat(s.grades.map(function(g) { return g === null ? '-' : g; })).concat([s.avg + '%']).join('\t');
+    }).join('\n');
+    var body = 'Gradebook for ' + this.PERIOD + ':\n\n' + cols + '\n' + dataRows;
+    window.location.href = 'mailto:admin@school.edu?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    this.closeMenu();
+  },
+  syncLearnEdu() {
+    this.closeMenu();
+    Modal.toast('Synced with Learn.edu!');
+  },
+  printGradebook() {
+    var win = window.open('', '_blank');
+    var self = this;
+    var html = '<html><head><style>body{font-family:sans-serif;padding:32px}h2{color:#E8562A}table{width:100%;border-collapse:collapse;margin-top:16px}th{background:#E8562A;color:white;padding:10px;text-align:left}td{border-bottom:1px solid #e5e7eb;padding:9px;font-size:0.9rem}tr:nth-child(even){background:#f9fafb}@media print{button{display:none}}</style></head><body>';
+    html += '<h2>' + this.PERIOD + ' — Gradebook</h2>';
+    html += '<p style="color:#6b7280;font-size:0.8rem">Exported ' + new Date().toLocaleDateString() + '</p>';
+    html += '<table><thead><tr><th>Student</th>';
+    this.ASSIGNMENTS.forEach(function(a) { html += '<th>' + a + '</th>'; });
+    html += '<th>Avg</th></tr></thead><tbody>';
+    this.STUDENTS.forEach(function(s) {
+      html += '<tr><td><b>' + s.name + '</b></td>';
+      s.grades.forEach(function(g) { html += '<td style="text-align:center">' + (g === null ? '-' : g) + '</td>'; });
+      html += '<td style="text-align:center;font-weight:bold">' + s.avg + '%</td></tr>';
+    });
+    html += '</tbody></table></body></html>';
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    win.print();
+    this.closeMenu();
+  },
+  presentation() {
+    var win = window.open('', '_blank');
+    var self = this;
+    var html = '<html><head><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui,sans-serif;background:#0f172a;color:white;min-height:100vh;padding:40px}h1{font-size:2.5rem;font-weight:900;margin-bottom:6px}.sub{color:#94a3b8;font-size:0.9rem;margin-bottom:32px}table{width:100%;border-collapse:collapse}th{background:#E8562A;color:white;padding:14px 18px;text-align:left;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.06em}td{border-bottom:1px solid #1e293b;padding:14px 18px;font-size:1rem}.good{color:#4ade80}.risk{color:#fbbf24}.bad{color:#f87171}tr:hover td{background:#1e293b}</style></head><body>';
+    html += '<h1>' + this.PERIOD + '</h1>';
+    html += '<p class="sub">' + new Date().toLocaleDateString() + ' &nbsp;·&nbsp; ' + this.STUDENTS.length + ' students</p>';
+    html += '<table><thead><tr><th>Student</th>';
+    this.ASSIGNMENTS.forEach(function(a) { html += '<th>' + a + '</th>'; });
+    html += '<th>Average</th><th>Status</th></tr></thead><tbody>';
+    this.STUDENTS.forEach(function(s) {
+      var cls = s.status === 'on-track' ? 'good' : s.status === 'at-risk' ? 'risk' : 'bad';
+      html += '<tr><td><b>' + s.name + '</b></td>';
+      s.grades.forEach(function(g) {
+        var gc = g >= 80 ? 'good' : g >= 70 ? 'risk' : g === null ? '' : 'bad';
+        html += '<td class="' + gc + '" style="text-align:center">' + (g === null ? '-' : g) + '</td>';
+      });
+      html += '<td class="' + cls + '" style="font-weight:900;text-align:center">' + s.avg + '%</td>';
+      html += '<td class="' + cls + '">' + s.status + '</td></tr>';
+    });
+    html += '</tbody></table></body></html>';
+    win.document.write(html);
+    win.document.close();
+    this.closeMenu();
+  },
+};
+window.GradebookSync = GradebookSync;

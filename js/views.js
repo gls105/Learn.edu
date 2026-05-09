@@ -4181,96 +4181,25 @@ Views.dashboardTeacher = function(tab) {
 
       <!-- Sync dropdown -->
       <div style="position:relative" id="gb-sync-wrap">
-        <button onclick="(function(){
-          var m=document.getElementById('gb-sync-menu');
-          m.style.display=m.style.display==='none'?'block':'none';
-          var close=function(e){if(!document.getElementById('gb-sync-wrap').contains(e.target)){m.style.display='none';document.removeEventListener('click',close);}};
-          setTimeout(function(){document.addEventListener('click',close)},10);
-        })()" style="display:flex;align-items:center;gap:6px;background:#111;color:white;border:none;border-radius:9px;padding:9px 16px;font-weight:800;font-size:0.82rem;cursor:pointer;font-family:inherit">
+        <button onclick="GradebookSync.toggleMenu()" style="display:flex;align-items:center;gap:6px;background:#111;color:white;border:none;border-radius:9px;padding:9px 16px;font-weight:800;font-size:0.82rem;cursor:pointer;font-family:inherit">
           🔄 Sync <span style="font-size:0.7rem;margin-left:2px">▾</span>
         </button>
-        <div id="gb-sync-menu" style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:white;border:1.5px solid #e5e7eb;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,0.13);min-width:200px;z-index:999;overflow:hidden">
+        <div id="gb-sync-menu" style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:white;border:1.5px solid #e5e7eb;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,0.13);min-width:210px;z-index:999;overflow:hidden">
           <div style="padding:6px 0">
-            <button onclick="(function(){
-              var names=['Student'].concat(${JSON.stringify(GB_ASSIGNMENTS)});
-              var rows=[names.join(',')];
-              ${JSON.stringify(GB_STUDENTS)}.forEach(function(s){
-                rows.push([s.name].concat(s.grades.map(function(g){return g===null?'':g;})).join(','));
-              });
-              var blob=new Blob([rows.join('\\n')],{type:'text/csv'});
-              var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='gradebook-period1.csv';a.click();
-              document.getElementById('gb-sync-menu').style.display='none';
-            })()" style="width:100%;text-align:left;padding:10px 16px;border:none;background:none;font-size:0.84rem;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:9px" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">📄 Export CSV</button>
-            <button onclick="(function(){
-              var names=['Student'].concat(${JSON.stringify(GB_ASSIGNMENTS)});
-              var rows=[names.join('\\t')];
-              ${JSON.stringify(GB_STUDENTS)}.forEach(function(s){
-                rows.push([s.name].concat(s.grades.map(function(g){return g===null?'':g;})).join('\\t'));
-              });
-              var blob=new Blob(['\\ufeff'+rows.join('\\n')],{type:'application/vnd.ms-excel'});
-              var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='gradebook-period1.xls';a.click();
-              document.getElementById('gb-sync-menu').style.display='none';
-            })()" style="width:100%;text-align:left;padding:10px 16px;border:none;background:none;font-size:0.84rem;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:9px" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">📊 Export Excel</button>
+            <button onclick="GradebookSync.exportCSV()" style="width:100%;text-align:left;padding:10px 16px;border:none;background:none;font-size:0.84rem;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:9px" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">📄 Export CSV</button>
+            <button onclick="GradebookSync.exportExcel()" style="width:100%;text-align:left;padding:10px 16px;border:none;background:none;font-size:0.84rem;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:9px" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">📊 Export Excel</button>
             <div style="height:1px;background:#f3f4f6;margin:4px 0"></div>
-            <button onclick="(function(){
-              var sub='Gradebook Export - Period 1';
-              var names=['Student'].concat(${JSON.stringify(GB_ASSIGNMENTS)});
-              var rows=[names.join('\\t')];
-              ${JSON.stringify(GB_STUDENTS)}.forEach(function(s){
-                rows.push([s.name].concat(s.grades.map(function(g){return g===null?'—':g;})).join('\\t'));
-              });
-              var body='Here is the current gradebook for Period 1:\\n\\n'+rows.join('\\n');
-              window.location.href='mailto:admin@school.edu?subject='+encodeURIComponent(sub)+'&body='+encodeURIComponent(body);
-              document.getElementById('gb-sync-menu').style.display='none';
-            })()" style="width:100%;text-align:left;padding:10px 16px;border:none;background:none;font-size:0.84rem;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:9px" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">📧 Email Admin</button>
-            <button onclick="(function(){
-              var toast=document.createElement('div');
-              toast.textContent='✅ Synced with Learn.edu!';
-              toast.style.cssText='position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#059669;color:white;padding:11px 24px;border-radius:12px;font-weight:800;font-size:0.88rem;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.18);animation:fadeIn 0.2s';
-              document.body.appendChild(toast);
-              setTimeout(function(){toast.remove();},2500);
-              document.getElementById('gb-sync-menu').style.display='none';
-            })()" style="width:100%;text-align:left;padding:10px 16px;border:none;background:none;font-size:0.84rem;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:9px" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">🔄 Sync Learn.edu</button>
+            <button onclick="GradebookSync.emailAdmin()" style="width:100%;text-align:left;padding:10px 16px;border:none;background:none;font-size:0.84rem;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:9px" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">📧 Email Admin</button>
+            <button onclick="GradebookSync.syncLearnEdu()" style="width:100%;text-align:left;padding:10px 16px;border:none;background:none;font-size:0.84rem;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:9px" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">🔄 Sync Learn.edu</button>
             <div style="height:1px;background:#f3f4f6;margin:4px 0"></div>
-            <button onclick="(function(){
-              var win=window.open('','_blank');
-              var html='<html><body style="font-family:sans-serif;padding:32px"><h2>Period 1 — 8th Math Gradebook</h2><table border=1 cellpadding=8 cellspacing=0 style="border-collapse:collapse;width:100%"><tr style="background:#E8562A;color:white"><th>Student</th>';
-              ${JSON.stringify(GB_ASSIGNMENTS)}.forEach(function(a){html+='<th>'+a+'</th>';});
-              html+='<th>Avg</th></tr>';
-              ${JSON.stringify(GB_STUDENTS)}.forEach(function(s,i){
-                html+='<tr style="background:'+(i%2===0?'#f9fafb':'white')+'"><td><b>'+s.name+'</b></td>';
-                s.grades.forEach(function(g){html+='<td style="text-align:center">'+(g===null?'—':g)+'</td>';});
-                html+='<td style="text-align:center;font-weight:bold">'+s.avg+'%</td></tr>';
-              });
-              html+='</table><p style="color:#999;margin-top:16px">Exported from Learn.edu · '+new Date().toLocaleDateString()+'</p></body></html>';
-              win.document.write(html);
-              win.document.close();
-              win.print();
-              document.getElementById('gb-sync-menu').style.display='none';
-            })()" style="width:100%;text-align:left;padding:10px 16px;border:none;background:none;font-size:0.84rem;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:9px" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">🖨️ Print</button>
-            <button onclick="(function(){
-              var data=[];
-              ${JSON.stringify(GB_STUDENTS)}.forEach(function(s){
-                data.push({name:s.name,avg:s.avg,status:s.status});
-              });
-              var html='<html><head><style>body{font-family:sans-serif;background:#111;color:white;padding:60px;text-align:center}h1{font-size:3rem;margin-bottom:8px}table{width:100%;border-collapse:collapse;margin-top:32px}th{background:#E8562A;color:white;padding:14px}td{border-bottom:1px solid #333;padding:12px;font-size:1.1rem}tr:hover{background:#222}</style></head><body>';
-              html+='<h1>Period 1 — 8th Math</h1><p style="color:#9ca3af">'+new Date().toLocaleDateString('en-US',{weekday:"long",year:"numeric",month:"long",day:"numeric"})+'</p>';
-              html+='<table><tr><th>Student</th><th>Average</th><th>Status</th></tr>';
-              data.forEach(function(s){
-                var c=s.status==="on-track"?"#4ade80":s.status==="at-risk"?"#fbbf24":"#f87171";
-                html+='<tr><td>'+s.name+'</td><td style="color:'+c+';font-weight:bold">'+s.avg+'%</td><td style="color:'+c+'">'+s.status+'</td></tr>';
-              });
-              html+='</table></body></html>';
-              var w=window.open('','_blank');
-              w.document.write(html);w.document.close();
-              document.getElementById('gb-sync-menu').style.display='none';
-            })()" style="width:100%;text-align:left;padding:10px 16px;border:none;background:none;font-size:0.84rem;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:9px" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">📽️ Presentation Maker</button>
+            <button onclick="GradebookSync.printGradebook()" style="width:100%;text-align:left;padding:10px 16px;border:none;background:none;font-size:0.84rem;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:9px" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">🖨️ Print</button>
+            <button onclick="GradebookSync.presentation()" style="width:100%;text-align:left;padding:10px 16px;border:none;background:none;font-size:0.84rem;font-weight:700;color:#374151;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:9px" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='none'">📽️ Presentation Maker</button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Gradebook table -->
+        <!-- Gradebook table -->
     <div style="background:white;border-radius:16px;border:1.5px solid #e5e7eb;overflow:hidden">
       <table style="width:100%;border-collapse:collapse">
         <thead>
