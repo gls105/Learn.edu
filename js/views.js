@@ -65,6 +65,7 @@ const Views = {
       { key:'spanish', icon:'🌎', name:'Spanish',        color:'#7c3aed', bg:'linear-gradient(135deg,#7c3aed,#a78bfa)', link:'subject/spanish/beginning',   lessons:25, desc:'Beginning through Advanced, verbs to subjunctive' },
       { key:'ela',     icon:'📖', name:'Language Arts',  color:'#0369a1', bg:'linear-gradient(135deg,#0369a1,#38bdf8)', link:'subject/ela/beginning',       lessons:6,  desc:'Grammar, essays, literary devices & analysis' },
       { key:'history', icon:'🏛️', name:'History',        color:'#b45309', bg:'linear-gradient(135deg,#b45309,#fbbf24)', link:'subject/history/ancient',     lessons:7,  desc:'Ancient civilizations, US & World history' },
+      { key:'coding', icon:'💻', name:'Coding', color:'#0f172a', bg:'linear-gradient(135deg,#0f172a,#334155)', link:'subject/coding/beginner', lessons:8, desc:'HTML, CSS, Python & JavaScript fundamentals' },
     ];
 
     // Nav
@@ -208,6 +209,7 @@ const Views = {
       spanish: { icon: '🌎', name: 'Spanish',              data: () => SPANISH_LESSONS, leveled: true  },
       ela:     { icon: '📚', name: 'Language Arts',        data: () => (typeof ELA_LESSONS     !=='undefined'?ELA_LESSONS    :[]), leveled: true },
       history: { icon: '🏛️', name: 'History',              data: () => (typeof HISTORY_LESSONS !=='undefined'?HISTORY_LESSONS:[]), leveled: true },
+      coding:  { icon: '💻', name: 'Coding',               data: () => (typeof CODING_LESSONS  !=='undefined'?CODING_LESSONS :[]), leveled: true },
     };
     const s = META[subjectKey];
     if (!s) return this.notFound();
@@ -236,6 +238,11 @@ const Views = {
       { key:'world',   label:'World History' },
       { key:'modern',  label:'Modern History' },
     ];
+    const CODING_LEVELS = [
+      { key:'beginner',     label:'Beginner' },
+      { key:'intermediate', label:'Intermediate' },
+      { key:'advanced',     label:'Advanced' },
+    ];
 
     const allLessons = s.data();
     const progress   = App.getProgress();
@@ -243,7 +250,7 @@ const Views = {
     let tabs, lessons, emptyMsg, subtitle;
 
     if (s.leveled) {
-      const levelList = subjectKey === 'spanish' ? SPANISH_LEVELS : subjectKey === 'ela' ? ELA_LEVELS : subjectKey === 'history' ? HISTORY_LEVELS : SCIENCE_LEVELS;
+      const levelList = subjectKey === 'spanish' ? SPANISH_LEVELS : subjectKey === 'ela' ? ELA_LEVELS : subjectKey === 'history' ? HISTORY_LEVELS : subjectKey === 'coding' ? CODING_LEVELS : SCIENCE_LEVELS;
       tabs = levelList.map(lv => {
         const count = allLessons.filter(l => l.level === lv.key).length;
         const isActive = lv.key === activeLevel;
@@ -314,15 +321,20 @@ const Views = {
       math:    { icon: '📐', name: 'Math'    },
       science: { icon: '⚗️', name: 'Science' },
       spanish: { icon: '🌎', name: 'Spanish' },
+      ela:     { icon: '📚', name: 'Language Arts' },
+      history: { icon: '🏛️', name: 'History' },
+      coding:  { icon: '💻', name: 'Coding'  },
     };
-    const s = META[lesson.subject];
-    const back = `subject/${lesson.subject}/${lesson.grade}`;
-    const subjectClass = lesson.subject; // math | science | spanish
+    const s = META[lesson.subject] || { icon: '📖', name: lesson.subject };
+    const back = lesson.grade
+      ? `subject/${lesson.subject}/${lesson.grade}`
+      : `subject/${lesson.subject}/${lesson.level || 'beginner'}`;
+    const subjectClass = lesson.subject; // math | science | spanish | coding
 
     return `
       ${this.nav({ hash: back, label: `← ${s.name}` })}
       <div class="lesson-header ${subjectClass}">
-        <div class="breadcrumb">${s.icon} ${s.name} &nbsp;·&nbsp; Grade ${lesson.grade}</div>
+        <div class="breadcrumb">${s.icon} ${s.name} &nbsp;·&nbsp; ${lesson.grade ? 'Grade ' + lesson.grade : (lesson.level || '')}</div>
         <h1>${lesson.title}</h1>
         <p class="sub">${lesson.subtitle}</p>
       </div>
@@ -339,6 +351,9 @@ const Views = {
       ...(typeof MATH_LESSONS    !== 'undefined' ? MATH_LESSONS    : []),
       ...(typeof SCIENCE_LESSONS !== 'undefined' ? SCIENCE_LESSONS : []),
       ...(typeof SPANISH_LESSONS !== 'undefined' ? SPANISH_LESSONS : []),
+      ...(typeof ELA_LESSONS     !== 'undefined' ? ELA_LESSONS     : []),
+      ...(typeof HISTORY_LESSONS !== 'undefined' ? HISTORY_LESSONS : []),
+      ...(typeof CODING_LESSONS  !== 'undefined' ? CODING_LESSONS  : []),
     ];
     const q = query.toLowerCase().trim();
     const results = q.length < 2 ? [] : all.filter(l =>
@@ -766,7 +781,7 @@ const Views = {
               </div>
             </div>
             <div style="display:flex;gap:8px">
-              <button class="btn btn-ghost" style="font-size:0.8rem;padding:8px 14px;background:white">
+              <button class="btn btn-ghost" onclick="SparkExport.run()" style="font-size:0.8rem;padding:8px 14px;background:white">
                 <i class="ph-bold ph-download-simple" style="font-size:13px"></i> Export
               </button>
               <button class="btn btn-primary" style="font-size:0.8rem;padding:8px 14px">
@@ -2969,13 +2984,15 @@ Views.dashboardStudent = function() {
   var spaLessons  = [];
   var elaLessons  = [];
   var histLessons = [];
-  try { mathLessons = (typeof MATH_LESSONS    !== 'undefined') ? MATH_LESSONS    : []; } catch(e) {}
-  try { sciLessons  = (typeof SCIENCE_LESSONS !== 'undefined') ? SCIENCE_LESSONS : []; } catch(e) {}
-  try { spaLessons  = (typeof SPANISH_LESSONS !== 'undefined') ? SPANISH_LESSONS : []; } catch(e) {}
-  try { elaLessons  = (typeof ELA_LESSONS     !== 'undefined') ? ELA_LESSONS     : []; } catch(e) {}
-  try { histLessons = (typeof HISTORY_LESSONS !== 'undefined') ? HISTORY_LESSONS : []; } catch(e) {}
+  var codingLessons = [];
+  try { mathLessons    = (typeof MATH_LESSONS    !== 'undefined') ? MATH_LESSONS    : []; } catch(e) {}
+  try { sciLessons     = (typeof SCIENCE_LESSONS !== 'undefined') ? SCIENCE_LESSONS : []; } catch(e) {}
+  try { spaLessons     = (typeof SPANISH_LESSONS !== 'undefined') ? SPANISH_LESSONS : []; } catch(e) {}
+  try { elaLessons     = (typeof ELA_LESSONS     !== 'undefined') ? ELA_LESSONS     : []; } catch(e) {}
+  try { histLessons    = (typeof HISTORY_LESSONS !== 'undefined') ? HISTORY_LESSONS : []; } catch(e) {}
+  try { codingLessons  = (typeof CODING_LESSONS  !== 'undefined') ? CODING_LESSONS  : []; } catch(e) {}
 
-  var allLessons = mathLessons.concat(sciLessons).concat(spaLessons).concat(elaLessons).concat(histLessons);
+  var allLessons = mathLessons.concat(sciLessons).concat(spaLessons).concat(elaLessons).concat(histLessons).concat(codingLessons);
 
   // ── completion counts ─────────────────────────────────────────────────────
   function countDone(arr) {
@@ -2985,12 +3002,13 @@ Views.dashboardStudent = function() {
     }
     return n;
   }
-  var mathDone  = countDone(mathLessons);
-  var sciDone   = countDone(sciLessons);
-  var spaDone   = countDone(spaLessons);
-  var elaDone   = countDone(elaLessons);
-  var histDone  = countDone(histLessons);
-  var totalDone = mathDone + sciDone + spaDone + elaDone + histDone;
+  var mathDone    = countDone(mathLessons);
+  var sciDone     = countDone(sciLessons);
+  var spaDone     = countDone(spaLessons);
+  var elaDone     = countDone(elaLessons);
+  var histDone    = countDone(histLessons);
+  var codingDone  = countDone(codingLessons);
+  var totalDone = mathDone + sciDone + spaDone + elaDone + histDone + codingDone;
 
   var completedLessons = allLessons.filter(function(l) {
     return progress[l.id] && progress[l.id].completed;
@@ -3084,7 +3102,7 @@ Views.dashboardStudent = function() {
     {id:'electric', color:'#ca8a04', label:'Electric'},
   ];
 
-  var subjColors = {math:'#E8562A', science:'#0891b2', spanish:'#16a34a', ela:'#7c3aed', history:'#d97706'};
+  var subjColors = {math:'#E8562A', science:'#0891b2', spanish:'#16a34a', ela:'#7c3aed', history:'#d97706', coding:'#0f172a'};
 
   var subjectCards = [
     {name:'Math',    icon:'\uD83D\uDCD0', done:mathDone,  total:mathLessons.length,  color:'#E8562A', route:'subject/math'},
@@ -3092,6 +3110,7 @@ Views.dashboardStudent = function() {
     {name:'Spanish', icon:'\uD83C\uDF0E', done:spaDone,   total:spaLessons.length,   color:'#16a34a', route:'subject/spanish'},
     {name:'ELA',     icon:'\uD83D\uDCD6', done:elaDone,   total:elaLessons.length,   color:'#7c3aed', route:'subject/ela'},
     {name:'History', icon:'\uD83C\uDFDB\uFE0F', done:histDone,  total:histLessons.length,  color:'#d97706', route:'subject/history'},
+    {name:'Coding',  icon:'\uD83D\uDCBB',       done:codingDone, total:codingLessons.length, color:'#0f172a', route:'subject/coding'},
   ];
 
   // ── BUILD SECTIONS ────────────────────────────────────────────────────────
@@ -3286,8 +3305,349 @@ Views.dashboardStudent = function() {
           </div>
         </div>
 
+        <!-- Quick Links: Leaderboard, Streak, Report -->
+        <div style="margin-bottom:22px">
+          <h2 style="font-size:0.8rem;font-weight:900;color:var(--sd-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">⚡ Quick Actions</h2>
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <button onclick="App.go('leaderboard')" style="display:flex;align-items:center;gap:8px;background:var(--sd-card);border:1.5px solid var(--sd-border);border-radius:14px;padding:12px 20px;cursor:pointer;font-family:inherit;font-size:0.88rem;font-weight:800;color:var(--sd-text);transition:all 0.15s" onmouseover="this.style.borderColor='#E8562A'" onmouseout="this.style.borderColor='var(--sd-border)'">🏆 Leaderboard</button>
+            <button onclick="App.go('streak-calendar')" style="display:flex;align-items:center;gap:8px;background:var(--sd-card);border:1.5px solid var(--sd-border);border-radius:14px;padding:12px 20px;cursor:pointer;font-family:inherit;font-size:0.88rem;font-weight:800;color:var(--sd-text);transition:all 0.15s" onmouseover="this.style.borderColor='#E8562A'" onmouseout="this.style.borderColor='var(--sd-border)'">🔥 Streak</button>
+            <button onclick="App.go('progress-report')" style="display:flex;align-items:center;gap:8px;background:var(--sd-card);border:1.5px solid var(--sd-border);border-radius:14px;padding:12px 20px;cursor:pointer;font-family:inherit;font-size:0.88rem;font-weight:800;color:var(--sd-text);transition:all 0.15s" onmouseover="this.style.borderColor='#E8562A'" onmouseout="this.style.borderColor='var(--sd-border)'">📊 Report</button>
+            <button onclick="App.go('rewards')" style="display:flex;align-items:center;gap:8px;background:var(--sd-card);border:1.5px solid var(--sd-border);border-radius:14px;padding:12px 20px;cursor:pointer;font-family:inherit;font-size:0.88rem;font-weight:800;color:var(--sd-text);transition:all 0.15s" onmouseover="this.style.borderColor='#E8562A'" onmouseout="this.style.borderColor='var(--sd-border)'">🎁 Rewards</button>
+          </div>
+        </div>
+
       </div>
     </div>`;
+};
+
+
+// ── Leaderboard ───────────────────────────────────────────────────────────
+Views.leaderboard = function() {
+  var xpState = {total:0, streak:0, level:1};
+  try { xpState = XP.getState(); } catch(e) {}
+  var user = null;
+  try { user = App.getUser(); } catch(e) {}
+  var userName = (user && user.name) ? user.name : 'You';
+  var lvl = {num:1, name:'Starter', color:'#6B7280'};
+  try { lvl = XP.level(xpState.total); } catch(e) {}
+
+  // Generate or load simulated peers
+  var peers = [];
+  try { peers = JSON.parse(localStorage.getItem('learnedu-leaderboard-peers') || 'null'); } catch(e) {}
+  if (!peers || peers.length !== 9) {
+    var firstNames = ['Alex','Jordan','Taylor','Morgan','Casey','Riley','Avery','Peyton','Quinn','Skylar'];
+    var lastNames  = ['Smith','Johnson','Williams','Brown','Jones','Garcia','Martinez','Davis','Wilson','Moore'];
+    peers = [];
+    for (var i = 0; i < 9; i++) {
+      var fn = firstNames[i % firstNames.length];
+      var ln = lastNames[(i * 3) % lastNames.length];
+      var xp = Math.floor(Math.random() * 851) + 50;
+      var streak = Math.floor(Math.random() * 15);
+      peers.push({name: fn + ' ' + ln, xp: xp, streak: streak});
+    }
+    try { localStorage.setItem('learnedu-leaderboard-peers', JSON.stringify(peers)); } catch(e) {}
+  }
+
+  // Build combined leaderboard
+  var all = peers.map(function(p) { return {name:p.name, xp:p.xp, streak:p.streak, isMe:false}; });
+  all.push({name: userName, xp: xpState.total, streak: xpState.streak, isMe:true});
+  all.sort(function(a,b) { return b.xp - a.xp; });
+
+  var myRank = 0;
+  for (var i = 0; i < all.length; i++) {
+    if (all[i].isMe) { myRank = i + 1; break; }
+  }
+
+  function levelBadge(xp) {
+    if (xp >= 1000) return {num:10, name:'Legend',   color:'#f59e0b'};
+    if (xp >= 750)  return {num:9,  name:'Galaxy',   color:'#7c3aed'};
+    if (xp >= 500)  return {num:8,  name:'Rocket',   color:'#6366f1'};
+    if (xp >= 400)  return {num:7,  name:'Forest',   color:'#059669'};
+    if (xp >= 300)  return {num:6,  name:'Explorer', color:'#0369a1'};
+    if (xp >= 200)  return {num:5,  name:'Ocean',    color:'#0891b2'};
+    if (xp >= 150)  return {num:4,  name:'Scholar',  color:'#16a34a'};
+    if (xp >= 100)  return {num:3,  name:'Achiever', color:'#ea580c'};
+    if (xp >= 50)   return {num:2,  name:'Learner',  color:'#E8562A'};
+    return {num:1, name:'Starter', color:'#6B7280'};
+  }
+
+  var rankEmoji = ['🥇','🥈','🥉'];
+
+  var rows = '';
+  for (var i = 0; i < all.length; i++) {
+    var s = all[i];
+    var lv = levelBadge(s.xp);
+    var rank = i + 1;
+    var bg = s.isMe ? 'background:#fff3ef;border:2px solid #E8562A;' : 'background:white;border:1.5px solid #f3f4f6;';
+    var nameStyle = s.isMe ? 'font-weight:900;color:#E8562A;' : 'font-weight:700;color:#374151;';
+    var rankStr = rank <= 3 ? rankEmoji[rank-1] : '#' + rank;
+    rows +=
+      '<div style="display:flex;align-items:center;gap:14px;' + bg + 'border-radius:14px;padding:13px 18px;margin-bottom:8px">' +
+        '<div style="font-size:1.2rem;font-weight:900;min-width:36px;text-align:center">' + rankStr + '</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="' + nameStyle + 'font-size:0.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + s.name + (s.isMe ? ' (You)' : '') + '</div>' +
+          '<div style="font-size:0.72rem;color:#9ca3af;margin-top:2px">🔥 ' + s.streak + ' day streak</div>' +
+        '</div>' +
+        '<div style="background:' + lv.color + '22;border:1.5px solid ' + lv.color + '66;border-radius:999px;padding:3px 10px;font-size:0.72rem;font-weight:800;color:' + lv.color + ';white-space:nowrap;flex-shrink:0">Lvl ' + lv.num + ' · ' + lv.name + '</div>' +
+        '<div style="font-size:0.95rem;font-weight:900;color:#374151;min-width:60px;text-align:right">⚡ ' + s.xp.toLocaleString() + '</div>' +
+      '</div>';
+  }
+
+  return '<div style="min-height:100vh;background:#f9fafb;font-family:inherit">' +
+    '<nav style="padding:16px 24px;display:flex;align-items:center;gap:14px;border-bottom:1.5px solid #f3f4f6;background:white;position:sticky;top:0;z-index:10">' +
+      '<button onclick="App.go('dashboard/student')" style="background:none;border:none;cursor:pointer;font-size:0.85rem;font-weight:700;color:#374151;font-family:inherit;display:flex;align-items:center;gap:6px">← Dashboard</button>' +
+      '<span style="font-size:1rem;font-weight:900">🏆 Leaderboard</span>' +
+    '</nav>' +
+    '<div style="max-width:600px;margin:0 auto;padding:28px 20px 80px">' +
+      '<div style="background:linear-gradient(135deg,#E8562A,#fb923c);border-radius:20px;padding:24px 28px;margin-bottom:24px;color:white;text-align:center">' +
+        '<div style="font-size:2.5rem;font-weight:900;line-height:1">#' + myRank + '</div>' +
+        '<div style="font-size:0.85rem;font-weight:700;opacity:0.9;margin-top:4px">Your Rank</div>' +
+        '<div style="font-size:0.8rem;opacity:0.8;margin-top:6px">⚡ ' + xpState.total + ' XP · 🔥 ' + xpState.streak + ' day streak</div>' +
+      '</div>' +
+      '<div style="font-size:0.75rem;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">Top 10 Students</div>' +
+      rows +
+    '</div>' +
+  '</div>';
+};
+
+// ── Streak Calendar ────────────────────────────────────────────────────────
+Views.streakCalendar = function() {
+  var xpState = {total:0, streak:0};
+  try { xpState = XP.getState(); } catch(e) {}
+
+  var studyDates = [];
+  try { studyDates = JSON.parse(localStorage.getItem('learnedu-study-dates') || '[]'); } catch(e) {}
+
+  var now = new Date();
+  var year = now.getFullYear();
+  var month = now.getMonth();
+  var todayStr = now.toISOString().slice(0,10);
+
+  var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  // Compute longest streak
+  var sorted = studyDates.slice().sort();
+  var longest = 0, cur = 0, prevDate = null;
+  for (var i = 0; i < sorted.length; i++) {
+    var d = sorted[i];
+    if (prevDate) {
+      var diff = (new Date(d) - new Date(prevDate)) / 86400000;
+      if (diff === 1) { cur++; } else { cur = 1; }
+    } else { cur = 1; }
+    if (cur > longest) longest = cur;
+    prevDate = d;
+  }
+
+  // Build calendar grid
+  var firstDay = new Date(year, month, 1).getDay();
+  var daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  var dayHeaders = dayNames.map(function(d) {
+    return '<div style="text-align:center;font-size:0.72rem;font-weight:800;color:#9ca3af;padding-bottom:8px">' + d + '</div>';
+  }).join('');
+
+  var cells = '';
+  for (var i = 0; i < firstDay; i++) {
+    cells += '<div></div>';
+  }
+  for (var day = 1; day <= daysInMonth; day++) {
+    var dateStr = year + '-' + String(month+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    var isToday = dateStr === todayStr;
+    var studied = studyDates.indexOf(dateStr) !== -1;
+    var isPast = dateStr < todayStr;
+    var isFuture = dateStr > todayStr;
+
+    var bg, border, color;
+    if (studied) {
+      bg = '#E8562A'; border = '#E8562A'; color = 'white';
+    } else if (isToday) {
+      bg = 'white'; border = '#E8562A'; color = '#E8562A';
+    } else if (isFuture) {
+      bg = '#f9fafb'; border = '#e5e7eb'; color = '#d1d5db';
+    } else {
+      bg = '#f3f4f6'; border = '#e5e7eb'; color = '#9ca3af';
+    }
+
+    cells +=
+      '<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;background:' + bg + ';border:1.5px solid ' + border + ';font-size:0.8rem;font-weight:' + (isToday || studied ? '900' : '600') + ';color:' + color + '">' +
+        day +
+      '</div>';
+  }
+
+  return '<div style="min-height:100vh;background:#f9fafb;font-family:inherit">' +
+    '<nav style="padding:16px 24px;display:flex;align-items:center;gap:14px;border-bottom:1.5px solid #f3f4f6;background:white;position:sticky;top:0;z-index:10">' +
+      '<button onclick="App.go('dashboard/student')" style="background:none;border:none;cursor:pointer;font-size:0.85rem;font-weight:700;color:#374151;font-family:inherit">← Dashboard</button>' +
+      '<span style="font-size:1rem;font-weight:900">🔥 Streak Calendar</span>' +
+    '</nav>' +
+    '<div style="max-width:560px;margin:0 auto;padding:28px 20px 80px">' +
+
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px">' +
+        '<div style="background:linear-gradient(135deg,#E8562A,#fb923c);border-radius:16px;padding:18px;color:white;text-align:center">' +
+          '<div style="font-size:2rem;font-weight:900">🔥 ' + (xpState.streak || 0) + '</div>' +
+          '<div style="font-size:0.72rem;font-weight:700;opacity:0.9;margin-top:4px">Current Streak</div>' +
+        '</div>' +
+        '<div style="background:white;border:1.5px solid #e5e7eb;border-radius:16px;padding:18px;text-align:center">' +
+          '<div style="font-size:2rem;font-weight:900;color:#374151">📈 ' + longest + '</div>' +
+          '<div style="font-size:0.72rem;font-weight:700;color:#9ca3af;margin-top:4px">Longest Streak</div>' +
+        '</div>' +
+        '<div style="background:white;border:1.5px solid #e5e7eb;border-radius:16px;padding:18px;text-align:center">' +
+          '<div style="font-size:2rem;font-weight:900;color:#374151">📅 ' + studyDates.length + '</div>' +
+          '<div style="font-size:0.72rem;font-weight:700;color:#9ca3af;margin-top:4px">Total Days Studied</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div style="background:white;border:1.5px solid #e5e7eb;border-radius:20px;padding:24px">' +
+        '<div style="font-size:1rem;font-weight:900;color:#374151;margin-bottom:18px;text-align:center">' + monthNames[month] + ' ' + year + '</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px">' +
+          dayHeaders + cells +
+        '</div>' +
+        '<div style="display:flex;gap:14px;justify-content:center;margin-top:18px;flex-wrap:wrap">' +
+          '<div style="display:flex;align-items:center;gap:6px"><div style="width:14px;height:14px;background:#E8562A;border-radius:4px"></div><span style="font-size:0.75rem;color:#6b7280;font-weight:600">Studied</span></div>' +
+          '<div style="display:flex;align-items:center;gap:6px"><div style="width:14px;height:14px;background:white;border:2px solid #E8562A;border-radius:4px"></div><span style="font-size:0.75rem;color:#6b7280;font-weight:600">Today</span></div>' +
+          '<div style="display:flex;align-items:center;gap:6px"><div style="width:14px;height:14px;background:#f3f4f6;border:1.5px solid #e5e7eb;border-radius:4px"></div><span style="font-size:0.75rem;color:#6b7280;font-weight:600">No Study</span></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+};
+
+// ── Progress Report ────────────────────────────────────────────────────────
+Views.progressReport = function() {
+  var user = null;
+  try { user = App.getUser(); } catch(e) {}
+  var studentName = (user && user.name) ? user.name : 'Student';
+  var xpState = {total:0, streak:0, unlockedIds:[]};
+  try { xpState = XP.getState(); } catch(e) {}
+  var lvl = {num:1, name:'Starter', color:'#6B7280'};
+  try { lvl = XP.level(xpState.total); } catch(e) {}
+  var progress = {};
+  try { progress = App.getProgress(); } catch(e) {}
+
+  var lessonArrays = {
+    Math:          {lessons:[], color:'#E8562A'},
+    Science:       {lessons:[], color:'#059669'},
+    Spanish:       {lessons:[], color:'#7c3aed'},
+    'Language Arts':{lessons:[], color:'#0369a1'},
+    History:       {lessons:[], color:'#b45309'},
+    Coding:        {lessons:[], color:'#0f172a'},
+  };
+  try { lessonArrays.Math.lessons          = (typeof MATH_LESSONS    !== 'undefined' ? MATH_LESSONS    : []); } catch(e) {}
+  try { lessonArrays.Science.lessons       = (typeof SCIENCE_LESSONS !== 'undefined' ? SCIENCE_LESSONS : []); } catch(e) {}
+  try { lessonArrays.Spanish.lessons       = (typeof SPANISH_LESSONS !== 'undefined' ? SPANISH_LESSONS : []); } catch(e) {}
+  try { lessonArrays['Language Arts'].lessons = (typeof ELA_LESSONS  !== 'undefined' ? ELA_LESSONS     : []); } catch(e) {}
+  try { lessonArrays.History.lessons       = (typeof HISTORY_LESSONS !== 'undefined' ? HISTORY_LESSONS : []); } catch(e) {}
+  try { lessonArrays.Coding.lessons        = (typeof CODING_LESSONS  !== 'undefined' ? CODING_LESSONS  : []); } catch(e) {}
+
+  var totalDone = 0, totalLessons = 0;
+  var subjectRows = '';
+  var subjects = Object.keys(lessonArrays);
+  for (var i = 0; i < subjects.length; i++) {
+    var subj = subjects[i];
+    var data = lessonArrays[subj];
+    if (!data.lessons.length) continue;
+    var done = 0, scoreSum = 0, scoreCt = 0;
+    for (var j = 0; j < data.lessons.length; j++) {
+      var l = data.lessons[j];
+      var p = progress[l.id];
+      if (p && p.completed) {
+        done++;
+        if (p.score) { scoreSum += p.score; scoreCt++; }
+      }
+    }
+    totalDone += done;
+    totalLessons += data.lessons.length;
+    var pct = data.lessons.length > 0 ? Math.round(done / data.lessons.length * 100) : 0;
+    var avg = scoreCt > 0 ? Math.round(scoreSum / scoreCt) : null;
+    subjectRows +=
+      '<tr style="border-bottom:1px solid #f3f4f6">' +
+        '<td style="padding:12px 16px;font-weight:700;font-size:0.88rem">' + subj + '</td>' +
+        '<td style="padding:12px 16px;text-align:center;font-size:0.88rem">' + done + ' / ' + data.lessons.length + '</td>' +
+        '<td style="padding:12px 16px">' +
+          '<div style="background:#f3f4f6;border-radius:999px;height:8px;overflow:hidden;min-width:80px">' +
+            '<div style="width:' + pct + '%;height:100%;background:' + data.color + ';border-radius:999px"></div>' +
+          '</div>' +
+          '<div style="font-size:0.7rem;color:#9ca3af;margin-top:3px">' + pct + '%</div>' +
+        '</td>' +
+        '<td style="padding:12px 16px;text-align:center;font-size:0.88rem;font-weight:800;color:' + (avg ? (avg>=80?'#059669':avg>=60?'#d97706':'#dc2626') : '#9ca3af') + '">' + (avg ? avg + '%' : '—') + '</td>' +
+      '</tr>';
+  }
+
+  var unlockedBadges = [];
+  try {
+    unlockedBadges = XP.REWARDS.filter(function(r) {
+      return r.type === 'badge' && xpState.unlockedIds.indexOf(r.id) !== -1;
+    });
+  } catch(e) {}
+
+  var badgesHtml = unlockedBadges.length
+    ? unlockedBadges.map(function(b) { return '<span style="background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:10px;padding:6px 12px;font-size:0.82rem;font-weight:700">' + b.icon + ' ' + b.name + '</span>'; }).join(' ')
+    : '<span style="color:#9ca3af;font-size:0.85rem">No badges yet — complete lessons to earn them!</span>';
+
+  var today = new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'});
+
+  return '<div style="min-height:100vh;background:#f9fafb;font-family:inherit">' +
+    '<style>@media print { .no-print { display:none !important; } }</style>' +
+    '<nav class="no-print" style="padding:16px 24px;display:flex;align-items:center;gap:14px;border-bottom:1.5px solid #f3f4f6;background:white;position:sticky;top:0;z-index:10">' +
+      '<button onclick="App.go('dashboard/student')" style="background:none;border:none;cursor:pointer;font-size:0.85rem;font-weight:700;color:#374151;font-family:inherit">← Dashboard</button>' +
+      '<span style="font-size:1rem;font-weight:900">📊 Progress Report</span>' +
+      '<div style="flex:1"></div>' +
+      '<button onclick="window.print()" style="background:#E8562A;color:white;border:none;border-radius:10px;padding:9px 18px;font-size:0.84rem;font-weight:800;cursor:pointer;font-family:inherit">🖨️ Print Report</button>' +
+    '</nav>' +
+    '<div style="max-width:720px;margin:0 auto;padding:32px 24px 80px">' +
+
+      '<div style="background:white;border:1.5px solid #e5e7eb;border-radius:20px;padding:28px;margin-bottom:20px">' +
+        '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px">' +
+          '<div>' +
+            '<div style="font-size:0.7rem;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Learn.edu — Student Progress Report</div>' +
+            '<h1 style="font-size:1.6rem;font-weight:900;color:#111;margin:0 0 4px">' + studentName + '</h1>' +
+            '<div style="font-size:0.85rem;color:#6b7280">Generated: ' + today + '</div>' +
+          '</div>' +
+          '<div style="background:#fff3ef;border:1.5px solid #fddacf;border-radius:14px;padding:12px 18px;text-align:center">' +
+            '<div style="font-size:0.68rem;font-weight:800;color:#E8562A;text-transform:uppercase;letter-spacing:0.06em">Level</div>' +
+            '<div style="font-size:1.4rem;font-weight:900;color:' + lvl.color + '">' + lvl.num + '</div>' +
+            '<div style="font-size:0.72rem;font-weight:700;color:' + lvl.color + '">' + lvl.name + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div style="background:white;border:1.5px solid #e5e7eb;border-radius:20px;padding:24px;margin-bottom:20px">' +
+        '<h2 style="font-size:0.8rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px">📚 Subject Progress</h2>' +
+        '<table style="width:100%;border-collapse:collapse">' +
+          '<thead>' +
+            '<tr style="border-bottom:2px solid #f3f4f6">' +
+              '<th style="padding:10px 16px;text-align:left;font-size:0.75rem;font-weight:800;color:#9ca3af;text-transform:uppercase">Subject</th>' +
+              '<th style="padding:10px 16px;text-align:center;font-size:0.75rem;font-weight:800;color:#9ca3af;text-transform:uppercase">Completed</th>' +
+              '<th style="padding:10px 16px;text-align:left;font-size:0.75rem;font-weight:800;color:#9ca3af;text-transform:uppercase">Progress</th>' +
+              '<th style="padding:10px 16px;text-align:center;font-size:0.75rem;font-weight:800;color:#9ca3af;text-transform:uppercase">Avg Score</th>' +
+            '</tr>' +
+          '</thead>' +
+          '<tbody>' + subjectRows + '</tbody>' +
+        '</table>' +
+      '</div>' +
+
+      '<div style="background:white;border:1.5px solid #e5e7eb;border-radius:20px;padding:24px;margin-bottom:20px">' +
+        '<h2 style="font-size:0.8rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px">⚡ XP & Achievements</h2>' +
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px">' +
+          '<div style="text-align:center;background:#f9fafb;border-radius:14px;padding:16px">' +
+            '<div style="font-size:1.5rem;font-weight:900;color:#E8562A">' + xpState.total + '</div>' +
+            '<div style="font-size:0.72rem;font-weight:700;color:#9ca3af;margin-top:4px">Total XP</div>' +
+          '</div>' +
+          '<div style="text-align:center;background:#f9fafb;border-radius:14px;padding:16px">' +
+            '<div style="font-size:1.5rem;font-weight:900;color:#E8562A">🔥 ' + (xpState.streak || 0) + '</div>' +
+            '<div style="font-size:0.72rem;font-weight:700;color:#9ca3af;margin-top:4px">Day Streak</div>' +
+          '</div>' +
+          '<div style="text-align:center;background:#f9fafb;border-radius:14px;padding:16px">' +
+            '<div style="font-size:1.5rem;font-weight:900;color:#E8562A">' + totalDone + '</div>' +
+            '<div style="font-size:0.72rem;font-weight:700;color:#9ca3af;margin-top:4px">Lessons Done</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="font-size:0.8rem;font-weight:800;color:#374151;margin-bottom:10px">Badges Earned:</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap">' + badgesHtml + '</div>' +
+      '</div>' +
+
+    '</div>' +
+  '</div>';
 };
 
 // ── Student Home (Airbnb-style) ────────────────────────────────────────────
@@ -3445,14 +3805,15 @@ Views.studentHome = function() {
   var user = {};
   try { user = App.getUser() || {}; } catch(e) {}
 
-  var mathLessons = [], sciLessons = [], spaLessons = [], elaLessons = [], histLessons = [];
-  try { mathLessons = (typeof MATH_LESSONS    !== 'undefined') ? MATH_LESSONS    : []; } catch(e) {}
-  try { sciLessons  = (typeof SCIENCE_LESSONS !== 'undefined') ? SCIENCE_LESSONS : []; } catch(e) {}
-  try { spaLessons  = (typeof SPANISH_LESSONS !== 'undefined') ? SPANISH_LESSONS : []; } catch(e) {}
-  try { elaLessons  = (typeof ELA_LESSONS     !== 'undefined') ? ELA_LESSONS     : []; } catch(e) {}
-  try { histLessons = (typeof HISTORY_LESSONS !== 'undefined') ? HISTORY_LESSONS : []; } catch(e) {}
+  var mathLessons = [], sciLessons = [], spaLessons = [], elaLessons = [], histLessons = [], codingLessons2 = [];
+  try { mathLessons    = (typeof MATH_LESSONS    !== 'undefined') ? MATH_LESSONS    : []; } catch(e) {}
+  try { sciLessons     = (typeof SCIENCE_LESSONS !== 'undefined') ? SCIENCE_LESSONS : []; } catch(e) {}
+  try { spaLessons     = (typeof SPANISH_LESSONS !== 'undefined') ? SPANISH_LESSONS : []; } catch(e) {}
+  try { elaLessons     = (typeof ELA_LESSONS     !== 'undefined') ? ELA_LESSONS     : []; } catch(e) {}
+  try { histLessons    = (typeof HISTORY_LESSONS !== 'undefined') ? HISTORY_LESSONS : []; } catch(e) {}
+  try { codingLessons2 = (typeof CODING_LESSONS  !== 'undefined') ? CODING_LESSONS  : []; } catch(e) {}
 
-  var allLessons = [].concat(mathLessons, sciLessons, spaLessons, elaLessons, histLessons);
+  var allLessons = [].concat(mathLessons, sciLessons, spaLessons, elaLessons, histLessons, codingLessons2);
 
   var ASSIGNED = [
     { id: 'math-4-multiplication', assignedBy: 'Ms. Rivera',   assignedDate: 'Apr 28' },
@@ -3580,7 +3941,7 @@ Views.studentHome = function() {
     '</nav>';
 
   // ── My Path sidebar data ──────────────────────────────────────────────────
-  var allForPath = mathLessons.concat(sciLessons).concat(spaLessons).concat(elaLessons).concat(histLessons);
+  var allForPath = mathLessons.concat(sciLessons).concat(spaLessons).concat(elaLessons).concat(histLessons).concat(codingLessons2);
   var pathLessons = allForPath.filter(function(l) { return !progress[l.id] || !progress[l.id].completed; }).slice(0, 8);
   var pathItems = '';
   pathLessons.forEach(function(l, i) {
@@ -3643,6 +4004,7 @@ Views.studentHome = function() {
   content += subjectRow('Spanish',       '<i class="ph-bold ph-chat-circle" style="font-size:1.1rem;vertical-align:-2px"></i>', 'subject/spanish/beginning',  spaLessons,   12);
   content += subjectRow('Language Arts', '<i class="ph-bold ph-book-open" style="font-size:1.1rem;vertical-align:-2px"></i>',   'subject/ela/beginning',      elaLessons,   12);
   content += subjectRow('History',       '<i class="ph-bold ph-scroll" style="font-size:1.1rem;vertical-align:-2px"></i>',      'subject/history/ancient',    histLessons,  12);
+  content += subjectRow('Coding',        '<i class="ph-bold ph-code" style="font-size:1.1rem;vertical-align:-2px"></i>',           'subject/coding/beginner',    codingLessons2, 8);
   content += '</div>';
 
   // Force full-screen: add sh-full to #app, cleaned up on next route

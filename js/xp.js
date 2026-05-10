@@ -57,6 +57,16 @@ const XP = {
       s.lastDate = today;
     }
 
+    // Record study date for streak calendar
+    try {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const studyDates = JSON.parse(localStorage.getItem('learnedu-study-dates') || '[]');
+      if (!studyDates.includes(todayStr)) {
+        studyDates.push(todayStr);
+        localStorage.setItem('learnedu-study-dates', JSON.stringify(studyDates));
+      }
+    } catch(e) {}
+
     // Auto-unlock badge: first lesson
     const progress = App ? App.getProgress() : {};
     const completedCount = Object.values(progress).filter(v => v.completed).length;

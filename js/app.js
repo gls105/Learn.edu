@@ -33,6 +33,7 @@ const App = {
         ...(typeof SPANISH_LESSONS !== 'undefined' ? SPANISH_LESSONS : []),
         ...(typeof ELA_LESSONS     !== 'undefined' ? ELA_LESSONS     : []),
         ...(typeof HISTORY_LESSONS !== 'undefined' ? HISTORY_LESSONS : []),
+        ...(typeof CODING_LESSONS  !== 'undefined' ? CODING_LESSONS  : []),
       ];
       const lesson = all.find(l => l.id === lessonId);
       if (!lesson) { app.innerHTML = Views.notFound(); return; }
@@ -162,6 +163,15 @@ const App = {
 
     } else if (view === 'roster-import') {
       app.innerHTML = Views.rosterImport();
+
+    } else if (view === 'leaderboard') {
+      app.innerHTML = Views.leaderboard();
+
+    } else if (view === 'streak-calendar') {
+      app.innerHTML = Views.streakCalendar();
+
+    } else if (view === 'progress-report') {
+      app.innerHTML = Views.progressReport();
 
     } else {
       app.innerHTML = Views.notFound();
@@ -904,6 +914,7 @@ const GradebookSync = {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
     this.closeMenu();
     Modal.toast('CSV downloaded!');
   },
@@ -920,6 +931,7 @@ const GradebookSync = {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
     this.closeMenu();
     Modal.toast('Excel file downloaded!');
   },
@@ -985,3 +997,38 @@ const GradebookSync = {
   },
 };
 window.GradebookSync = GradebookSync;
+
+// ── Spark Export ──────────────────────────────────────────────────────────
+const SparkExport = {
+  run() {
+    const students = [
+      {name:'Emma Johnson',    scores:{math:17,sci:13,spa:23}},
+      {name:'Liam Martinez',   scores:{math:13,sci:9, spa:18}},
+      {name:'Sophia Chen',     scores:{math:19,sci:14,spa:25}},
+      {name:'Noah Williams',   scores:{math:10,sci:7, spa:14}},
+      {name:'Ava Thompson',    scores:{math:15,sci:12,spa:21}},
+      {name:'Charlotte Lee',   scores:{math:18,sci:14,spa:24}},
+      {name:'Isabella Garcia', scores:{math:14,sci:11,spa:20}},
+      {name:'Mason Rodriguez', scores:{math:11,sci:8, spa:15}},
+    ];
+    const rows = [['Student','Math Score (%)','Science Score (%)','Spanish Score (%)','Average (%)']];
+    students.forEach(function(s) {
+      var mathPct = Math.round(s.scores.math / 20 * 100);
+      var sciPct  = Math.round(s.scores.sci  / 15 * 100);
+      var spaPct  = Math.round(s.scores.spa  / 25 * 100);
+      var avg     = Math.round((mathPct + sciPct + spaPct) / 3);
+      rows.push(['"' + s.name + '"', mathPct, sciPct, spaPct, avg]);
+    });
+    var csv = rows.map(function(r) { return r.join(','); }).join('\n');
+    var blob = new Blob([csv], {type: 'text/csv'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'spark-results-' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
+    if (typeof Modal !== 'undefined') Modal.toast('Spark results exported!');
+  }
+};
+window.SparkExport = SparkExport;
