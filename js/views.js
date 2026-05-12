@@ -3395,7 +3395,7 @@ Views.leaderboard = function() {
 
   return '<div style="min-height:100vh;background:#f9fafb;font-family:inherit">' +
     '<nav style="padding:16px 24px;display:flex;align-items:center;gap:14px;border-bottom:1.5px solid #f3f4f6;background:white;position:sticky;top:0;z-index:10">' +
-      '<button onclick="App.go('dashboard/student')" style="background:none;border:none;cursor:pointer;font-size:0.85rem;font-weight:700;color:#374151;font-family:inherit;display:flex;align-items:center;gap:6px">← Dashboard</button>' +
+      '<button onclick="App.go(\'dashboard/student\')" style="background:none;border:none;cursor:pointer;font-size:0.85rem;font-weight:700;color:#374151;font-family:inherit;display:flex;align-items:center;gap:6px">← Dashboard</button>' +
       '<span style="font-size:1rem;font-weight:900">🏆 Leaderboard</span>' +
     '</nav>' +
     '<div style="max-width:600px;margin:0 auto;padding:28px 20px 80px">' +
@@ -3477,7 +3477,7 @@ Views.streakCalendar = function() {
 
   return '<div style="min-height:100vh;background:#f9fafb;font-family:inherit">' +
     '<nav style="padding:16px 24px;display:flex;align-items:center;gap:14px;border-bottom:1.5px solid #f3f4f6;background:white;position:sticky;top:0;z-index:10">' +
-      '<button onclick="App.go('dashboard/student')" style="background:none;border:none;cursor:pointer;font-size:0.85rem;font-weight:700;color:#374151;font-family:inherit">← Dashboard</button>' +
+      '<button onclick="App.go(\'dashboard/student\')" style="background:none;border:none;cursor:pointer;font-size:0.85rem;font-weight:700;color:#374151;font-family:inherit">← Dashboard</button>' +
       '<span style="font-size:1rem;font-weight:900">🔥 Streak Calendar</span>' +
     '</nav>' +
     '<div style="max-width:560px;margin:0 auto;padding:28px 20px 80px">' +
@@ -3589,7 +3589,7 @@ Views.progressReport = function() {
   return '<div style="min-height:100vh;background:#f9fafb;font-family:inherit">' +
     '<style>@media print { .no-print { display:none !important; } }</style>' +
     '<nav class="no-print" style="padding:16px 24px;display:flex;align-items:center;gap:14px;border-bottom:1.5px solid #f3f4f6;background:white;position:sticky;top:0;z-index:10">' +
-      '<button onclick="App.go('dashboard/student')" style="background:none;border:none;cursor:pointer;font-size:0.85rem;font-weight:700;color:#374151;font-family:inherit">← Dashboard</button>' +
+      '<button onclick="App.go(\'dashboard/student\')" style="background:none;border:none;cursor:pointer;font-size:0.85rem;font-weight:700;color:#374151;font-family:inherit">← Dashboard</button>' +
       '<span style="font-size:1rem;font-weight:900">📊 Progress Report</span>' +
       '<div style="flex:1"></div>' +
       '<button onclick="window.print()" style="background:#E8562A;color:white;border:none;border-radius:10px;padding:9px 18px;font-size:0.84rem;font-weight:800;cursor:pointer;font-family:inherit">🖨️ Print Report</button>' +
