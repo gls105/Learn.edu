@@ -3336,10 +3336,11 @@ Views.dashboardStudent = function() {
 // ── AI Recommendations ───────────────────────────────────────────────────
 Views.recommendations = function() {
   var result = { analysis:null, picks:[] };
-  try { result = RecommendationEngine.getRecommendations(8); } catch(e) {}
+  var engine = (typeof RecommendationEngine !== 'undefined') ? RecommendationEngine : null;
+  try { if (engine) result = engine.getRecommendations(8); } catch(e) {}
   var analysis = result.analysis || { subjects:{}, completedCount:0, avgScore:null, targetDifficulty:1, weakSubjects:[], untouchedSubjects:[] };
   var picks = result.picks || [];
-  var meta = RecommendationEngine.SUBJECT_META || {};
+  var meta = engine ? (engine.SUBJECT_META || {}) : {};
 
   function esc(s) {
     return String(s || '').replace(/[&<>"']/g, function(c) {
