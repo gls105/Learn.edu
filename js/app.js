@@ -61,6 +61,9 @@ const App = {
     } else if (view === 'rewards') {
       app.innerHTML = Views.rewards();
 
+    } else if (view === 'recommendations') {
+      app.innerHTML = Views.recommendations();
+
     } else if (view === 'game') {
       const gameId = parts[1] || '';
       if (gameId === 'mathblast') {

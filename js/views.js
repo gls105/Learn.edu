@@ -3057,11 +3057,19 @@ Views.dashboardStudent = function() {
     xpBarLabel = xpState.total + ' XP \u2014 All rewards unlocked! \uD83C\uDF89';
   }
 
-  // recommended (first 3 uncompleted)
+  // AI-powered recommendations (adaptive difficulty + weak areas)
+  var recommendationMeta = [];
   var recommended = [];
-  for (var i = 0; i < allLessons.length && recommended.length < 3; i++) {
-    if (!progress[allLessons[i].id] || !progress[allLessons[i].id].completed) {
-      recommended.push(allLessons[i]);
+  try {
+    var recResult = RecommendationEngine.getRecommendations(3);
+    recommendationMeta = recResult.picks || [];
+    recommended = recommendationMeta.map(function(r) { return r.lesson; });
+  } catch(e) {
+    for (var i = 0; i < allLessons.length && recommended.length < 3; i++) {
+      if (!progress[allLessons[i].id] || !progress[allLessons[i].id].completed) {
+        recommended.push(allLessons[i]);
+        recommendationMeta.push({ lesson: allLessons[i], label: 'Next Best Lesson', confidence: 72, reasons: ['Keep building momentum'] });
+      }
     }
   }
 
@@ -3159,7 +3167,9 @@ Views.dashboardStudent = function() {
   } else {
     for (var i = 0; i < recommended.length; i++) {
       var l = recommended[i];
+      var rec = recommendationMeta[i] || { label:'Next Best Lesson', confidence:72, reasons:['Keep building momentum'] };
       var lc = subjColors[l.subject] || '#888';
+      var reasonText = (rec.reasons && rec.reasons.length) ? rec.reasons.join(' · ') : 'Personalized for your next step';
       keepGoingHtml +=
         '<div onclick="App.go(\'lesson/' + l.id + '\')"'
         + ' style="display:flex;align-items:center;gap:14px;background:var(--sd-card);border:1.5px solid var(--sd-border);border-radius:14px;padding:16px;cursor:pointer;transition:transform 0.15s"'
@@ -3167,9 +3177,10 @@ Views.dashboardStudent = function() {
         + ' onmouseout="this.style.transform=\'\'">'
         + '<div style="width:42px;height:42px;border-radius:10px;background:' + lc + ';display:flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:800;color:white;text-align:center;flex-shrink:0;line-height:1.2">' + (l.code || '') + '</div>'
         + '<div style="flex:1;min-width:0">'
-        +   '<div style="font-size:0.88rem;font-weight:800;color:var(--sd-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (l.title || l.topic || '') + '</div>'
-        +   '<div style="font-size:0.73rem;color:var(--sd-muted);text-transform:capitalize">' + (l.subject || '') + (l.grade ? ' \u00B7 Grade ' + l.grade : (l.level ? ' \u00B7 ' + l.level : '')) + '</div>'
+        +   '<div style="display:flex;align-items:center;gap:7px;margin-bottom:2px;min-width:0"><span style="font-size:0.88rem;font-weight:800;color:var(--sd-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (l.title || l.topic || '') + '</span><span style="font-size:0.62rem;font-weight:900;color:' + lc + ';background:' + lc + '18;border:1px solid ' + lc + '44;border-radius:999px;padding:2px 7px;white-space:nowrap">' + rec.label + '</span></div>'
+        +   '<div style="font-size:0.73rem;color:var(--sd-muted);text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (l.subject || '') + (l.grade ? ' \u00B7 Grade ' + l.grade : (l.level ? ' \u00B7 ' + l.level : '')) + ' · ' + reasonText + '</div>'
         + '</div>'
+        + '<span style="font-size:0.72rem;font-weight:900;color:' + lc + ';background:' + lc + '14;border-radius:999px;padding:4px 8px;white-space:nowrap">' + rec.confidence + '% match</span>'
         + '<span style="font-size:0.84rem;font-weight:800;color:var(--sd-accent);white-space:nowrap">Start \u2192</span>'
         + '</div>';
     }
@@ -3309,6 +3320,7 @@ Views.dashboardStudent = function() {
         <div style="margin-bottom:22px">
           <h2 style="font-size:0.8rem;font-weight:900;color:var(--sd-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">⚡ Quick Actions</h2>
           <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <button onclick="App.go('recommendations')" style="display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#fff3ef,#fff7ed);border:1.5px solid #fed7aa;border-radius:14px;padding:12px 20px;cursor:pointer;font-family:inherit;font-size:0.88rem;font-weight:900;color:#E8562A;transition:all 0.15s" onmouseover="this.style.borderColor='#E8562A'" onmouseout="this.style.borderColor='#fed7aa'">✨ AI Picks</button>
             <button onclick="App.go('leaderboard')" style="display:flex;align-items:center;gap:8px;background:var(--sd-card);border:1.5px solid var(--sd-border);border-radius:14px;padding:12px 20px;cursor:pointer;font-family:inherit;font-size:0.88rem;font-weight:800;color:var(--sd-text);transition:all 0.15s" onmouseover="this.style.borderColor='#E8562A'" onmouseout="this.style.borderColor='var(--sd-border)'">🏆 Leaderboard</button>
             <button onclick="App.go('streak-calendar')" style="display:flex;align-items:center;gap:8px;background:var(--sd-card);border:1.5px solid var(--sd-border);border-radius:14px;padding:12px 20px;cursor:pointer;font-family:inherit;font-size:0.88rem;font-weight:800;color:var(--sd-text);transition:all 0.15s" onmouseover="this.style.borderColor='#E8562A'" onmouseout="this.style.borderColor='var(--sd-border)'">🔥 Streak</button>
             <button onclick="App.go('progress-report')" style="display:flex;align-items:center;gap:8px;background:var(--sd-card);border:1.5px solid var(--sd-border);border-radius:14px;padding:12px 20px;cursor:pointer;font-family:inherit;font-size:0.88rem;font-weight:800;color:var(--sd-text);transition:all 0.15s" onmouseover="this.style.borderColor='#E8562A'" onmouseout="this.style.borderColor='var(--sd-border)'">📊 Report</button>
@@ -3318,6 +3330,96 @@ Views.dashboardStudent = function() {
 
       </div>
     </div>`;
+};
+
+
+// ── AI Recommendations ───────────────────────────────────────────────────
+Views.recommendations = function() {
+  var result = { analysis:null, picks:[] };
+  try { result = RecommendationEngine.getRecommendations(8); } catch(e) {}
+  var analysis = result.analysis || { subjects:{}, completedCount:0, avgScore:null, targetDifficulty:1, weakSubjects:[], untouchedSubjects:[] };
+  var picks = result.picks || [];
+  var meta = RecommendationEngine.SUBJECT_META || {};
+
+  function esc(s) {
+    return String(s || '').replace(/[&<>"']/g, function(c) {
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+    });
+  }
+
+  function subjName(key) {
+    return (meta[key] && meta[key].label) || key || 'Subject';
+  }
+
+  var summary = analysis.completedCount === 0
+    ? 'Start with a friendly foundation lesson. As you complete lessons, recommendations will adapt to your scores.'
+    : 'Ranked from your scores, completed lessons, subject balance, grade level, and difficulty fit.';
+
+  var subjectHtml = Object.keys(analysis.subjects || {}).map(function(key) {
+    var s = analysis.subjects[key];
+    var m = meta[key] || { icon:'📘', label:key, color:'#6b7280' };
+    var status = s.done === 0 ? 'Not started' : (s.avg < 75 ? 'Needs focus' : (s.avg >= 88 ? 'Strong' : 'On track'));
+    var statusColor = s.done === 0 ? '#6b7280' : (s.avg < 75 ? '#dc2626' : (s.avg >= 88 ? '#059669' : '#0369a1'));
+    return '<div style="background:white;border:1.5px solid #f3f4f6;border-radius:16px;padding:16px">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px">'
+      +   '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:1.25rem">' + m.icon + '</span><strong style="font-size:0.9rem;color:#111">' + esc(m.label) + '</strong></div>'
+      +   '<span style="font-size:0.68rem;font-weight:900;color:' + statusColor + ';background:' + statusColor + '14;border-radius:999px;padding:3px 8px;white-space:nowrap">' + status + '</span>'
+      + '</div>'
+      + '<div style="height:8px;background:#f3f4f6;border-radius:999px;overflow:hidden;margin-bottom:8px"><div style="height:100%;width:' + s.pct + '%;background:' + m.color + ';border-radius:999px"></div></div>'
+      + '<div style="display:flex;justify-content:space-between;font-size:0.75rem;color:#6b7280;font-weight:700"><span>' + s.done + '/' + s.total + ' lessons</span><span>' + (s.avg === null ? 'No score yet' : s.avg + '% avg') + '</span></div>'
+      + '</div>';
+  }).join('');
+
+  var cards = picks.length ? picks.map(function(rec, idx) {
+    var l = rec.lesson;
+    var m = meta[l.subject] || { icon:'📘', label:l.subject || 'Lesson', color:'#6b7280' };
+    var reasons = (rec.reasons && rec.reasons.length ? rec.reasons : ['Personalized next step']).map(function(r) {
+      return '<span style="font-size:0.72rem;font-weight:800;color:#374151;background:#f3f4f6;border-radius:999px;padding:5px 10px">' + esc(r) + '</span>';
+    }).join('');
+    return '<div onclick="App.go(\'lesson/' + esc(l.id) + '\')" style="background:white;border:1.5px solid #f3f4f6;border-radius:20px;padding:18px;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s" onmouseover="this.style.transform=\'translateY(-3px)\';this.style.boxShadow=\'0 12px 28px rgba(0,0,0,0.08)\'" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'
+      + '<div style="display:flex;align-items:flex-start;gap:14px">'
+      +   '<div style="width:48px;height:48px;border-radius:14px;background:' + m.color + ';display:flex;align-items:center;justify-content:center;color:white;font-size:1.25rem;font-weight:900;flex-shrink:0">' + (idx + 1) + '</div>'
+      +   '<div style="flex:1;min-width:0">'
+      +     '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px"><span style="font-size:0.7rem;font-weight:900;color:' + m.color + ';background:' + m.color + '16;border-radius:999px;padding:3px 9px">✨ ' + esc(rec.label) + '</span><span style="font-size:0.7rem;font-weight:800;color:#6b7280">' + rec.confidence + '% match</span></div>'
+      +     '<h3 style="font-size:1.05rem;font-weight:900;color:#111;margin:0 0 4px;line-height:1.2">' + esc(l.title || l.topic || 'Lesson') + '</h3>'
+      +     '<p style="font-size:0.8rem;color:#6b7280;font-weight:600;margin:0 0 10px;text-transform:capitalize">' + m.icon + ' ' + esc(m.label) + (l.grade ? ' · Grade ' + l.grade : (l.level ? ' · ' + esc(l.level) : '')) + (l.duration ? ' · ' + esc(l.duration) : '') + '</p>'
+      +     '<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px">' + reasons + '</div>'
+      +     '<div style="display:flex;align-items:center;gap:8px;color:' + m.color + ';font-size:0.82rem;font-weight:900">Start lesson →</div>'
+      +   '</div>'
+      + '</div>'
+      + '</div>';
+  }).join('') : '<div style="background:white;border:1.5px solid #f3f4f6;border-radius:20px;padding:28px;text-align:center;color:#6b7280">🎉 No recommendations left — you completed everything!</div>';
+
+  var focusText = analysis.weakSubjects && analysis.weakSubjects.length
+    ? 'Focus now: ' + analysis.weakSubjects.map(subjName).join(', ')
+    : (analysis.untouchedSubjects && analysis.untouchedSubjects.length ? 'Try something new: ' + analysis.untouchedSubjects.slice(0,2).map(subjName).join(', ') : 'Keep your streak alive with the next best lesson.');
+
+  return '<div style="min-height:100vh;background:#f9fafb;font-family:inherit">'
+    + '<nav style="padding:16px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1.5px solid #f3f4f6;background:white;position:sticky;top:0;z-index:10">'
+    +   '<button onclick="App.go(\'dashboard/student\')" style="background:none;border:none;cursor:pointer;font-size:0.85rem;font-weight:800;color:#374151;font-family:inherit;display:flex;align-items:center;gap:6px">← Dashboard</button>'
+    +   '<span style="font-size:1rem;font-weight:900">✨ AI Lesson Recommendations</span>'
+    +   '<button onclick="App.go(\'spark/play\')" style="background:#7c3aed;color:white;border:none;border-radius:10px;padding:8px 14px;font-size:0.78rem;font-weight:900;cursor:pointer;font-family:inherit">Retake Spark</button>'
+    + '</nav>'
+    + '<div style="max-width:980px;margin:0 auto;padding:30px 20px 80px">'
+    +   '<div style="background:linear-gradient(135deg,#111827,#374151);border-radius:24px;padding:28px;color:white;margin-bottom:22px;overflow:hidden;position:relative">'
+    +     '<div style="position:absolute;right:-40px;top:-40px;width:180px;height:180px;border-radius:50%;background:rgba(232,86,42,0.35)"></div>'
+    +     '<div style="position:relative;z-index:1;max-width:680px">'
+    +       '<div style="font-size:0.75rem;font-weight:900;letter-spacing:0.08em;text-transform:uppercase;color:#fed7aa;margin-bottom:8px">Adaptive recommendations</div>'
+    +       '<h1 style="font-size:2rem;font-weight:900;letter-spacing:-1px;margin:0 0 8px">Your next best lessons</h1>'
+    +       '<p style="font-size:0.95rem;line-height:1.55;color:#e5e7eb;margin:0 0 16px">' + esc(summary) + '</p>'
+    +       '<div style="display:flex;gap:10px;flex-wrap:wrap">'
+    +         '<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:999px;padding:7px 12px;font-size:0.78rem;font-weight:800">' + analysis.completedCount + ' lessons completed</span>'
+    +         '<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:999px;padding:7px 12px;font-size:0.78rem;font-weight:800">' + (analysis.avgScore === null ? 'No average yet' : analysis.avgScore + '% average') + '</span>'
+    +         '<span style="background:rgba(232,86,42,0.25);border:1px solid rgba(251,146,60,0.45);border-radius:999px;padding:7px 12px;font-size:0.78rem;font-weight:900;color:#fed7aa">' + esc(focusText) + '</span>'
+    +       '</div>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div style="display:grid;grid-template-columns:1.35fr 0.9fr;gap:20px;align-items:start">'
+    +     '<div><h2 style="font-size:0.78rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 12px">Ranked AI picks</h2><div style="display:flex;flex-direction:column;gap:12px">' + cards + '</div></div>'
+    +     '<div style="position:sticky;top:82px"><h2 style="font-size:0.78rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 12px">Subject signals</h2><div style="display:flex;flex-direction:column;gap:10px">' + subjectHtml + '</div></div>'
+    +   '</div>'
+    + '</div>'
+    + '</div>';
 };
 
 
